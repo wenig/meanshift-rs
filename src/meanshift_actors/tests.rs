@@ -1,6 +1,6 @@
 use ndarray::prelude::*;
 use actix::prelude::*;
-use crate::meanshift::*;
+use crate::meanshift_actors::*;
 use std::sync::{Arc, Mutex};
 use std::fs::File;
 use std::io::{BufReader, BufRead};

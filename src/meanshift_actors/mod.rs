@@ -6,8 +6,8 @@ mod label_helper;
 
 use actix::{Actor, ActorContext, Context, Addr, SyncArbiter, Handler, Recipient, AsyncContext};
 use ndarray::{Array2, Axis, ArcArray1, Array1, ArrayView2, concatenate, arr2, Array};
-use crate::meanshift::helper::MeanShiftHelper;
-pub use crate::meanshift::messages::{MeanShiftMessage, MeanShiftResponse, MeanShiftHelperResponse, MeanShiftHelperWorkMessage};
+use crate::meanshift_actors::helper::MeanShiftHelper;
+pub use crate::meanshift_actors::messages::{MeanShiftMessage, MeanShiftResponse, MeanShiftHelperResponse, MeanShiftHelperWorkMessage};
 
 use kdtree::KdTree;
 use kdtree::distance::squared_euclidean;
@@ -16,28 +16,48 @@ use num_traits::float::Float;
 use std::sync::Arc;
 use std::collections::HashMap;
 use std::ops::{Sub, DerefMut};
-use sortedvec::sortedvec;
 use std::iter::FromIterator;
 use std::time::{SystemTime};
 use log::*;
 use ndarray_stats::QuantileExt;
-use crate::meanshift::messages::{MeanShiftLabelHelperResponse, MeanShiftLabelHelperMessage, PoisonPill};
-use crate::meanshift::label_helper::MeanShiftLabelHelper;
+use crate::meanshift_actors::messages::{MeanShiftLabelHelperResponse, MeanShiftLabelHelperMessage, PoisonPill};
+use crate::meanshift_actors::label_helper::MeanShiftLabelHelper;
 use std::borrow::BorrowMut;
+use sorted_vec::SortedVec;
 
-sortedvec! {
-    struct SortedVec {
-        fn derive_key(x: &(usize, usize)) -> usize {
-            (*x).0
-        }
+
+#[derive(Debug)]
+struct SortedElement {
+    key: usize,
+    value: usize
+}
+
+impl SortedElement {
+    pub fn new(key: usize, value: usize) -> Self {
+        Self {key, value}
     }
 }
 
-impl DerefMut for SortedVec {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.inner
+impl Eq for SortedElement {}
+
+impl PartialEq<Self> for SortedElement {
+    fn eq(&self, other: &Self) -> bool {
+        self.key.eq(&other.key)
     }
 }
+
+impl PartialOrd<Self> for SortedElement {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.key.partial_cmp(&other.key)
+    }
+}
+
+impl Ord for SortedElement {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.key.cmp(&other.key)
+    }
+}
+
 
 #[derive(Clone)]
 pub enum DistanceMeasure {
@@ -75,7 +95,7 @@ pub struct MeanShiftActor {
     start_time: Option<SystemTime>,
     distance_measure: DistanceMeasure,
     cluster_centers: Option<Array2<f32>>,
-    labels: SortedVec
+    labels: SortedVec<SortedElement>
 }
 
 impl Actor for MeanShiftActor {
@@ -99,7 +119,7 @@ impl MeanShiftActor {
             start_time: None,
             distance_measure: DistanceMeasure::SquaredEuclidean,
             cluster_centers: None,
-            labels: SortedVec::default()
+            labels: SortedVec::new()
         }
     }
 
@@ -272,20 +292,21 @@ impl Handler<MeanShiftLabelHelperResponse> for MeanShiftActor {
     type Result = ();
 
     fn handle(&mut self, msg: MeanShiftLabelHelperResponse, ctx: &mut Self::Context) -> Self::Result {
-        self.labels.push((msg.point_id, msg.label));
+        self.labels.insert(SortedElement::new(msg.point_id, msg.label));
 
-        if self.labels.len() == self.dataset.as_ref().unwrap().shape()[0] {
+        let len = self.dataset.as_ref().unwrap().shape()[0];
+        if self.labels.len() == len {
             self.label_helpers.as_ref().unwrap().do_send(PoisonPill);
             match &self.receiver {
                 Some(recipient) => {
                     let cluster_centers = self.cluster_centers.as_ref().unwrap().clone();
-                    let labels = self.labels.iter().map(|x| x.1).collect();
+                    let labels = self.labels.iter().map(|x| x.value).collect();
                     recipient.do_send(MeanShiftResponse { cluster_centers, labels } ).unwrap();
                 },
                 None => ()
             }
             ctx.stop();
-        } else if self.distances_sent < self.dataset.as_ref().unwrap().shape()[0] {
+        } else if self.distances_sent < len {
             let point_id = self.distances_sent;
             self.distances_sent += 1;
             msg.source.do_send(MeanShiftLabelHelperMessage { source: ctx.address().recipient(), point_id }).unwrap();
