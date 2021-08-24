@@ -7,9 +7,10 @@ use kdtree::distance::squared_euclidean;
 
 use ndarray::{ArcArray2};
 
-use crate::meanshift_actors::{RefArray, MeanShiftHelperResponse, DistanceMeasure};
+use crate::meanshift_actors::{MeanShiftHelperResponse};
 use std::sync::Arc;
 use actix::dev::MessageResponse;
+use crate::meanshift_base::{closest_distance, DistanceMeasure};
 
 
 pub struct MeanShiftLabelHelper {
@@ -28,12 +29,12 @@ impl MeanShiftLabelHelper {
     }
 
     fn closest_distance(&mut self, point_id: usize) -> usize {
-        let point = self.data.select(Axis(0), &[point_id]).mean_axis(Axis(0)).unwrap();
-        self.cluster_centers.axis_iter(Axis(0)).map(|center| {
-            self.distance_measure.call()(point.as_slice().unwrap(), center.as_slice().unwrap())
-        }).enumerate().reduce(|(min_i, min), (i, x)| {
-            if x < min { (i, x) } else { (min_i, min) }
-        }).unwrap().0
+        closest_distance(
+            self.data.to_shared(),
+            point_id,
+            self.cluster_centers.to_shared(),
+            self.distance_measure.clone()
+        )
     }
 }
 

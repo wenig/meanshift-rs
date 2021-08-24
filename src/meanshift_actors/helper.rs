@@ -7,9 +7,10 @@ use kdtree::distance::squared_euclidean;
 
 use ndarray::{ArcArray2};
 
-use crate::meanshift_actors::{RefArray, MeanShiftHelperResponse, DistanceMeasure};
+use crate::meanshift_actors::{MeanShiftHelperResponse};
 use std::sync::Arc;
 use actix::dev::MessageResponse;
+use crate::meanshift_base::{mean_shift_single, RefArray, DistanceMeasure};
 
 
 pub struct MeanShiftHelper {
@@ -30,36 +31,13 @@ impl MeanShiftHelper {
     }
 
     fn mean_shift_single(&mut self, seed: usize, bandwidth: f32) -> (Array1<f32>, usize, usize) {
-        //let start = SystemTime::now();
-        let stop_threshold = 1e-3 * bandwidth;
-        let max_iter = 300;
-
-        let mut my_mean = self.data.select(Axis(0), &[seed]).mean_axis(Axis(0)).unwrap();
-        let mut my_old_mean = my_mean.clone();
-        let mut iterations: usize = 0;
-        let mut points_within_len: usize = 0;
-        loop {
-            let within_result = self.tree.within(my_mean.as_slice().unwrap(), bandwidth, &(self.distance_measure.call()));
-            let neighbor_ids: Vec<usize> = match within_result {
-                Ok(neighbors) => neighbors.into_iter().map(|(_, x)| x.clone()).collect(),
-                Err(_) => break
-            };
-            //println!("{:?}", neighbor_ids);
-            let points_within = self.data.select(Axis(0), neighbor_ids.as_slice());
-            points_within_len = points_within.shape()[0];
-            my_old_mean = my_mean;
-            my_mean = points_within.mean_axis(Axis(0)).unwrap();
-
-            if self.distance_measure.call()(my_mean.as_slice().unwrap(), my_old_mean.as_slice().unwrap()) < stop_threshold || iterations >= max_iter {
-                break
-            }
-
-            iterations += 1;
-        }
-
-        //println!("took {} microseconds", SystemTime::now().duration_since(start).unwrap().as_micros());
-
-        (my_mean, points_within_len, iterations)
+        mean_shift_single(
+            self.data.to_shared(),
+            self.tree.clone(),
+            seed,
+            bandwidth,
+            self.distance_measure.clone()
+        )
     }
 }
 
