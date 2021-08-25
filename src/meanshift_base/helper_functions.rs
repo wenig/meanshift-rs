@@ -8,7 +8,6 @@ pub fn mean_shift_single(data: ArcArray2<f32>, tree: Arc<KdTree<f32, usize, RefA
     let max_iter = 300;
 
     let mut my_mean = data.select(Axis(0), &[seed]).mean_axis(Axis(0)).unwrap();
-    let mut my_old_mean = my_mean.clone();
     let mut iterations: usize = 0;
     let mut points_within_len: usize = 0;
     loop {
@@ -20,7 +19,7 @@ pub fn mean_shift_single(data: ArcArray2<f32>, tree: Arc<KdTree<f32, usize, RefA
 
         let points_within = data.select(Axis(0), neighbor_ids.as_slice());
         points_within_len = points_within.shape()[0];
-        my_old_mean = my_mean;
+        let my_old_mean = my_mean;
         my_mean = points_within.mean_axis(Axis(0)).unwrap();
 
         if distance_measure.call()(my_mean.as_slice().unwrap(), my_old_mean.as_slice().unwrap()) < stop_threshold || iterations >= max_iter {

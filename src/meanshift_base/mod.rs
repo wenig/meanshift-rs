@@ -22,7 +22,6 @@ pub(crate) struct MeanShiftBase {
     pub cluster_centers: Option<Array2<f32>>,
     pub tree: Option<Arc<KdTree<f32, usize, RefArray>>>,
     pub center_tree: Option<KdTree<f32, usize, RefArray>>,
-    pub labels: Vec<usize>,
     pub distance_measure: DistanceMeasure,
     pub start_time: Option<SystemTime>
 }

@@ -10,16 +10,12 @@ use ndarray::parallel::prelude::*;
 #[derive(Default)]
 pub struct MeanShiftParallel {
     meanshift: MeanShiftBase,
-    n_threads: usize,
 }
 
 impl MeanShiftParallel {
     pub fn new(n_threads: usize) -> Self {
         rayon::ThreadPoolBuilder::new().num_threads(n_threads).build_global().unwrap();
-        MeanShiftParallel {
-            n_threads,
-            ..Default::default()
-        }
+        MeanShiftParallel::default()
     }
 
     pub fn fit(&mut self, data: Array2<f32>) {

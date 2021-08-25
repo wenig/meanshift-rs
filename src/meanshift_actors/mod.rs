@@ -5,7 +5,7 @@ mod tests;
 mod label_helper;
 
 use actix::{Actor, ActorContext, Context, Addr, SyncArbiter, Handler, Recipient, AsyncContext};
-use ndarray::{Array2, Axis, ArcArray1, Array1, ArrayView2, concatenate, arr2, Array};
+use ndarray::{Array1};
 use crate::meanshift_actors::helper::MeanShiftHelper;
 pub use crate::meanshift_actors::messages::{MeanShiftMessage, MeanShiftResponse, MeanShiftHelperResponse, MeanShiftHelperWorkMessage};
 
