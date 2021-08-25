@@ -9,20 +9,20 @@ use ndarray::{Array2, Axis, ArcArray1, Array1, ArrayView2, concatenate, arr2, Ar
 use crate::meanshift_actors::helper::MeanShiftHelper;
 pub use crate::meanshift_actors::messages::{MeanShiftMessage, MeanShiftResponse, MeanShiftHelperResponse, MeanShiftHelperWorkMessage};
 
-use kdtree::KdTree;
-use kdtree::distance::squared_euclidean;
+
+
 use std::cmp::Ordering;
-use num_traits::float::Float;
-use std::sync::Arc;
-use std::collections::HashMap;
-use std::ops::{Sub, DerefMut};
-use std::iter::FromIterator;
+
+
+
+
+
 use std::time::{SystemTime};
 use log::*;
-use ndarray_stats::QuantileExt;
+
 use crate::meanshift_actors::messages::{MeanShiftLabelHelperResponse, MeanShiftLabelHelperMessage, PoisonPill};
 use crate::meanshift_actors::label_helper::MeanShiftLabelHelper;
-use std::borrow::BorrowMut;
+
 use sorted_vec::SortedVec;
 use crate::meanshift_base::{MeanShiftBase, RefArray};
 

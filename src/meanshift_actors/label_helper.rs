@@ -1,9 +1,9 @@
 use actix::{Actor, SyncContext, Handler, ActorContext};
 use crate::meanshift_actors::messages::{MeanShiftLabelHelperMessage, MeanShiftLabelHelperResponse, PoisonPill};
 use ndarray::{ArcArray2};
-use crate::meanshift_actors::{MeanShiftHelperResponse};
-use std::sync::Arc;
-use actix::dev::MessageResponse;
+
+
+
 use crate::meanshift_base::{closest_distance, DistanceMeasure};
 
 
@@ -48,7 +48,7 @@ impl Handler<MeanShiftLabelHelperMessage> for MeanShiftLabelHelper {
 impl Handler<PoisonPill> for MeanShiftLabelHelper {
     type Result = ();
 
-    fn handle(&mut self, msg: PoisonPill, ctx: &mut Self::Context) -> Self::Result {
+    fn handle(&mut self, _msg: PoisonPill, ctx: &mut Self::Context) -> Self::Result {
         ctx.stop();
     }
 }

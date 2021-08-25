@@ -1,4 +1,4 @@
-use ndarray::{Axis, ArcArray2, Array1, ArcArray1};
+use ndarray::{Axis, ArcArray2, Array1};
 use crate::meanshift_base::utils::{DistanceMeasure, RefArray};
 use std::sync::Arc;
 use kdtree::KdTree;

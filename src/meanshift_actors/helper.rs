@@ -54,7 +54,7 @@ impl Handler<MeanShiftHelperWorkMessage> for MeanShiftHelper {
 impl Handler<PoisonPill> for MeanShiftHelper {
     type Result = ();
 
-    fn handle(&mut self, msg: PoisonPill, ctx: &mut Self::Context) -> Self::Result {
+    fn handle(&mut self, _msg: PoisonPill, ctx: &mut Self::Context) -> Self::Result {
         ctx.stop();
     }
 }

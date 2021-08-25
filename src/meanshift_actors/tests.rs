@@ -3,7 +3,7 @@ use actix::prelude::*;
 use crate::meanshift_actors::*;
 use std::sync::{Arc, Mutex};
 use log::*;
-use crate::utils::read_data;
+use crate::test_utils::read_data;
 
 struct MeanShiftReceiver {
     result: Arc<Mutex<Option<Array2<f32>>>>,

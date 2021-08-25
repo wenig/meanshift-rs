@@ -2,10 +2,10 @@
 mod tests;
 
 use crate::meanshift_base::{MeanShiftBase, mean_shift_single, RefArray, closest_distance};
-use ndarray::{Array2, Axis, Array1, ArcArray2};
+use ndarray::{Array2, Array1, ArcArray2};
 use ndarray::parallel::prelude::*;
-use rayon::prelude::*;
-use log::*;
+
+
 
 #[derive(Default)]
 pub struct MeanShiftParallel {
