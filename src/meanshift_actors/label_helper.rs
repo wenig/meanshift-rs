@@ -1,12 +1,6 @@
 use actix::{Actor, SyncContext, Handler, ActorContext};
-use crate::meanshift_actors::messages::{MeanShiftHelperWorkMessage, MeanShiftLabelHelperMessage, MeanShiftLabelHelperResponse, PoisonPill};
-
-use ndarray::prelude::*;
-use kdtree::{KdTree};
-use kdtree::distance::squared_euclidean;
-
+use crate::meanshift_actors::messages::{MeanShiftLabelHelperMessage, MeanShiftLabelHelperResponse, PoisonPill};
 use ndarray::{ArcArray2};
-
 use crate::meanshift_actors::{MeanShiftHelperResponse};
 use std::sync::Arc;
 use actix::dev::MessageResponse;

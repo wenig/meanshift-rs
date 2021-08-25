@@ -1,5 +1,5 @@
 use actix::prelude::*;
-use ndarray::{Array2, Array1, ArcArray2};
+use ndarray::{Array2, Array1};
 
 
 #[derive(Message)]

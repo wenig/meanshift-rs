@@ -1,10 +1,9 @@
-use ndarray::{Axis, ArcArray2, Array1};
+use ndarray::{Axis, ArcArray2, Array1, ArcArray1};
 use crate::meanshift_base::utils::{DistanceMeasure, RefArray};
 use std::sync::Arc;
 use kdtree::KdTree;
 
 pub fn mean_shift_single(data: ArcArray2<f32>, tree: Arc<KdTree<f32, usize, RefArray>>, seed: usize, bandwidth: f32, distance_measure: DistanceMeasure) -> (Array1<f32>, usize, usize) {
-    //let start = SystemTime::now();
     let stop_threshold = 1e-3 * bandwidth;
     let max_iter = 300;
 
@@ -18,7 +17,7 @@ pub fn mean_shift_single(data: ArcArray2<f32>, tree: Arc<KdTree<f32, usize, RefA
             Ok(neighbors) => neighbors.into_iter().map(|(_, x)| x.clone()).collect(),
             Err(_) => break
         };
-        //println!("{:?}", neighbor_ids);
+
         let points_within = data.select(Axis(0), neighbor_ids.as_slice());
         points_within_len = points_within.shape()[0];
         my_old_mean = my_mean;

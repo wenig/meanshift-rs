@@ -2,11 +2,8 @@ use ndarray::prelude::*;
 use actix::prelude::*;
 use crate::meanshift_actors::*;
 use std::sync::{Arc, Mutex};
-use std::fs::File;
-use std::io::{BufReader, BufRead};
-use std::str::FromStr;
-use csv::{ReaderBuilder, Trim};
 use log::*;
+use crate::utils::read_data;
 
 struct MeanShiftReceiver {
     result: Arc<Mutex<Option<Array2<f32>>>>,
@@ -31,25 +28,6 @@ impl Handler<MeanShiftResponse> for MeanShiftReceiver {
     }
 }
 
-pub fn read_data_(file_path: &str) -> Array2<f32> {
-    let file = File::open(file_path).unwrap();
-    let count_reader = BufReader::new(file);
-    let n_lines = count_reader.lines().count() - 1;
-
-    let file = File::open(file_path).unwrap();
-    let mut reader = ReaderBuilder::new().has_headers(true).trim(Trim::All).from_reader(file);
-
-    let n_rows = n_lines;
-    let n_columns = reader.headers().unwrap().len();
-
-    let flat_data: Array1<f32> = reader.records().into_iter().flat_map(|rec| {
-        rec.unwrap().iter().map(|b| {
-            f32::from_str(b).unwrap()
-        }).collect::<Vec<f32>>()
-    }).collect();
-
-    flat_data.into_shape((n_rows, n_columns)).expect("Could not deserialize sent data")
-}
 
 #[test]
 fn test_runs_meanshift() {
@@ -64,7 +42,7 @@ fn test_runs_meanshift() {
 
 
     let _system = System::run(move || {
-        let dataset = read_data_("data/test.csv");
+        let dataset = read_data("data/test.csv");
 
         let receiver = MeanShiftReceiver {result: cloned_result, labels: cloned_labels}.start();
         let meanshift = MeanShiftActor::new(20).start();

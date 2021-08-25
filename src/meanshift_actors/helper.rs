@@ -3,13 +3,10 @@ use crate::meanshift_actors::messages::{MeanShiftHelperWorkMessage, PoisonPill};
 
 use ndarray::prelude::*;
 use kdtree::{KdTree};
-use kdtree::distance::squared_euclidean;
-
 use ndarray::{ArcArray2};
 
 use crate::meanshift_actors::{MeanShiftHelperResponse};
 use std::sync::Arc;
-use actix::dev::MessageResponse;
 use crate::meanshift_base::{mean_shift_single, RefArray, DistanceMeasure};
 
 

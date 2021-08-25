@@ -116,7 +116,7 @@ impl MeanShiftActor {
         }
     }
 
-    fn add_means(&mut self, mean: Array1<f32>, points_within_len: usize, iterations: usize) {
+    fn add_mean(&mut self, mean: Array1<f32>, points_within_len: usize, iterations: usize) {
         if points_within_len > 0 {
             let identifier = self.meanshift.means.len();
             self.meanshift.center_tree.as_mut().unwrap().add(RefArray(mean.to_shared()), identifier).unwrap();
@@ -168,7 +168,7 @@ impl Handler<MeanShiftHelperResponse> for MeanShiftActor {
     type Result = ();
 
     fn handle(&mut self, msg: MeanShiftHelperResponse, ctx: &mut Self::Context) -> Self::Result {
-        self.add_means(msg.mean, msg.points_within_len, msg.iterations);
+        self.add_mean(msg.mean, msg.points_within_len, msg.iterations);
 
         if self.meanshift.means.len() == self.meanshift.dataset.as_ref().unwrap().shape()[0] {
             debug!("all means received");
