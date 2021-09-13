@@ -1,9 +1,4 @@
 use ndarray::prelude::*;
-
-
-
-
-
 use log::*;
 use crate::test_utils::read_data;
 use crate::meanshift_parallel::MeanShiftParallel;
@@ -11,8 +6,6 @@ use crate::meanshift_parallel::MeanShiftParallel;
 
 #[test]
 fn test_runs_meanshift() {
-    env_logger::init();
-
     let dataset = read_data("data/test.csv");
     let mut meanshift = MeanShiftParallel::new(20);
     let (cluster_centers, mut received_label) = meanshift.fit_predict(dataset);
@@ -27,6 +20,5 @@ fn test_runs_meanshift() {
 
     let expected_label = 0;
     received_label.dedup();
-    debug!("received labels {:?}", received_label);
     assert_eq!(expected_label, received_label[0])
 }

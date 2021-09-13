@@ -31,10 +31,6 @@ impl Handler<MeanShiftResponse> for MeanShiftReceiver {
 
 #[test]
 fn test_runs_meanshift() {
-    env_logger::init();
-
-    debug!("test started");
-
     let result = Arc::new(Mutex::new(None));
     let cloned_result = Arc::clone(&result);
     let labels = Arc::new(Mutex::new(None));
@@ -60,6 +56,5 @@ fn test_runs_meanshift() {
     let expected_label = 0;
     let mut received_label = (*labels.lock().unwrap()).as_ref().unwrap().clone();
     received_label.dedup();
-    debug!("received labels {:?}", received_label);
     assert_eq!(expected_label, received_label[0])
 }
