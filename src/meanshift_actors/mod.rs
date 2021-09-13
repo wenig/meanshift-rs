@@ -107,8 +107,10 @@ impl MeanShiftActor {
         self.meanshift.build_center_tree();
         self.create_helpers();
 
-        self.centers_sent = self.n_threads;
-        for t in 0..self.n_threads {
+        let n_clusters = self.n_threads.min(self.meanshift.dataset.as_ref().unwrap().shape()[0]);
+
+        self.centers_sent = n_clusters;
+        for t in 0..n_clusters {
             self.helpers.as_ref().unwrap().do_send(MeanShiftHelperWorkMessage {
                 source: rec.clone(),
                 start_center: t
@@ -139,8 +141,9 @@ impl MeanShiftActor {
     }
 
     fn distribute_distance_calculation(&mut self, rec: Recipient<MeanShiftLabelHelperResponse>) {
-        self.distances_sent = self.n_threads;
-        for t in 0..self.n_threads {
+        let n_clusters = self.n_threads.min(self.meanshift.dataset.as_ref().unwrap().shape()[0]);
+        self.distances_sent = n_clusters;
+        for t in 0..n_clusters {
             self.label_helpers.as_ref().unwrap().do_send(MeanShiftLabelHelperMessage {
                 source: rec.clone(),
                 point_id: t
