@@ -24,7 +24,7 @@ use crate::meanshift_actors::messages::{MeanShiftLabelHelperResponse, MeanShiftL
 use crate::meanshift_actors::label_helper::MeanShiftLabelHelper;
 
 use sorted_vec::SortedVec;
-use crate::meanshift_base::{MeanShiftBase, RefArray};
+use crate::meanshift_base::{MeanShiftBase};
 
 
 #[derive(Debug)]
@@ -67,6 +67,7 @@ pub struct MeanShiftActor {
     receiver: Option<Recipient<MeanShiftResponse>>,
     centers_sent: usize,
     distances_sent: usize,
+    #[allow(dead_code)]
     start_time: Option<SystemTime>,
     labels: SortedVec<SortedElement>
 }
@@ -91,14 +92,14 @@ impl MeanShiftActor {
     }
 
     fn create_helpers(&mut self) {
-        let data = self.meanshift.dataset.as_ref().unwrap().clone().into_shared();
+        let data = self.meanshift.dataset.as_ref().unwrap().to_shared();
         let tree = self.meanshift.tree.as_ref().unwrap().clone();
         let bandwidth = self.meanshift.bandwidth;
         let distance_measure = self.meanshift.distance_measure.clone();
 
         self.helpers = Some(SyncArbiter::start(self.n_threads, move || MeanShiftHelper::new(
             data.clone(), tree.clone(), bandwidth, distance_measure.clone()
-        )))
+        )));
     }
 
     fn distribute_data(&mut self, rec: Recipient<MeanShiftHelperResponse>) {
@@ -121,7 +122,6 @@ impl MeanShiftActor {
     fn add_mean(&mut self, mean: Array1<f32>, points_within_len: usize, iterations: usize) {
         if points_within_len > 0 {
             let identifier = self.meanshift.means.len();
-            self.meanshift.center_tree.as_mut().unwrap().add(RefArray(mean.to_shared()), identifier).unwrap();
             self.meanshift.means.push((mean, points_within_len, iterations, identifier));
         }
     }

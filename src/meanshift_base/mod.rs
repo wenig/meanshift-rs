@@ -23,14 +23,17 @@ pub(crate) struct MeanShiftBase {
     pub tree: Option<Arc<KdTree<f32, usize, RefArray>>>,
     pub center_tree: Option<KdTree<f32, usize, RefArray>>,
     pub distance_measure: DistanceMeasure,
+    #[allow(dead_code)]
     pub start_time: Option<SystemTime>
 }
 
 impl MeanShiftBase {
+    #[allow(dead_code)]
     pub(crate) fn start_timer(&mut self) {
         self.start_time = Some(SystemTime::now());
     }
 
+    #[allow(dead_code)]
     pub(crate) fn end_timer(&mut self) {
         debug!("duration {}", SystemTime::now().duration_since(self.start_time.unwrap()).unwrap().as_millis());
     }
@@ -80,6 +83,11 @@ impl MeanShiftBase {
 
         self.means.dedup_by_key(|(x, _, _, _)| x.clone());
 
+        let tree = self.center_tree.as_mut().unwrap();
+        for (point, _, _, i) in self.means.iter() {
+            tree.add(RefArray(point.to_shared()), i.clone()).unwrap();
+        }
+
         let mut unique: HashMap<usize, bool> = HashMap::from_iter(self.means.iter().map(|(_, _, _, i)| (*i, true)));
 
         for (mean, _, _, i) in self.means.iter(){
@@ -109,24 +117,5 @@ impl MeanShiftBase {
         }).collect();
 
         self.cluster_centers = Some(concatenate(Axis(0), cluster_centers.as_slice()).unwrap());
-    }
-
-    fn mean_shift_single(&mut self, seed: usize, bandwidth: f32) -> (Array1<f32>, usize, usize) {
-        mean_shift_single(
-            self.dataset.as_ref().unwrap().to_shared(),
-            self.tree.as_ref().unwrap().clone(),
-            seed,
-            bandwidth,
-            self.distance_measure.clone()
-        )
-    }
-
-    fn closest_distance(&mut self, point_id: usize) -> usize {
-        closest_distance(
-            self.dataset.as_ref().unwrap().to_shared(),
-            point_id,
-            self.cluster_centers.as_ref().unwrap().to_shared(),
-            self.distance_measure.clone()
-        )
     }
 }

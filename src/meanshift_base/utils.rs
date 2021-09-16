@@ -6,7 +6,9 @@ use std::cmp::Ordering;
 #[derive(Clone)]
 pub enum DistanceMeasure {
     SquaredEuclidean,
+    #[allow(dead_code)]
     Minkowski,
+    #[allow(dead_code)]
     Manhattan
 }
 

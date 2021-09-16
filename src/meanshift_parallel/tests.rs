@@ -1,5 +1,4 @@
 use ndarray::prelude::*;
-use log::*;
 use crate::test_utils::read_data;
 use crate::meanshift_parallel::MeanShiftParallel;
 
