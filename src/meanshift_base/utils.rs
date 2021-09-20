@@ -2,6 +2,7 @@ use kdtree::distance::squared_euclidean;
 use std::ops::Sub;
 use ndarray::{ArcArray1, Array1};
 use std::cmp::Ordering;
+use std::str::FromStr;
 
 #[derive(Clone)]
 pub enum DistanceMeasure {
@@ -29,6 +30,22 @@ impl DistanceMeasure {
 impl Default for DistanceMeasure {
     fn default() -> Self {
         DistanceMeasure::SquaredEuclidean
+    }
+}
+
+impl FromStr for DistanceMeasure {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.eq("squared_euclidean") {
+            Ok(Self::SquaredEuclidean)
+        } else if s.eq("minkowski") {
+            Ok(Self::Minkowski)
+        } else if s.eq("manhattan") {
+            Ok(Self::Manhattan)
+        } else {
+            Err(())
+        }
     }
 }
 

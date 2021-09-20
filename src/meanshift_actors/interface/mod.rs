@@ -5,7 +5,6 @@ mod actor;
 
 use anyhow::{Result, Error};
 use crate::interface::{MeanShiftInterface, Parameters, MeanShiftResult};
-use crate::{MeanShiftActor, MeanShiftResponse, MeanShiftMessage};
 use crate::meanshift_base::MeanShiftBase;
 pub use crate::meanshift_actors::interface::sink::MySink;
 use sorted_vec::SortedVec;
@@ -14,6 +13,8 @@ use crate::meanshift_actors::interface::actor::SinkActor;
 use actix::{Actor, Addr, Handler, ContextFutureSpawner};
 use actix::io::SinkWrite;
 use tokio::sync::mpsc;
+use crate::MeanShiftActor;
+use crate::meanshift_actors::{MeanShiftResponse, MeanShiftMessage};
 
 impl MeanShiftInterface for MeanShiftActor {
     fn init(parameters: Parameters) -> Self {
