@@ -3,6 +3,8 @@ use actix::prelude::*;
 use crate::meanshift_actors::*;
 use std::sync::{Arc, Mutex};
 use crate::test_utils::read_data;
+use tokio::time::{Duration};
+use actix_rt::time::sleep;
 
 struct MeanShiftReceiver {
     result: Arc<Mutex<Option<Array2<f32>>>>,
@@ -37,14 +39,7 @@ fn test_runs_meanshift() {
     let labels = Arc::new(Mutex::new(None));
     let cloned_labels = Arc::clone(&labels);
 
-
-    let _system = System::run(move || {
-        let dataset = read_data("data/test.csv");
-
-        let receiver = MeanShiftReceiver {result: cloned_result, labels: cloned_labels}.start();
-        let meanshift = MeanShiftActor::new(8).start();
-        meanshift.do_send(MeanShiftMessage { source: Some(receiver.recipient()), data: dataset });
-    });
+    run_system(cloned_result, cloned_labels);
 
     let expects: Array2<f32> = arr2(&[
         [0.5185592, 0.43546146, 0.5697923]
@@ -58,4 +53,14 @@ fn test_runs_meanshift() {
     let mut received_label = (*labels.lock().unwrap()).as_ref().unwrap().clone();
     received_label.dedup();
     assert_eq!(expected_label, received_label[0])
+}
+
+#[actix_rt::main]
+async fn run_system(cloned_result: Arc<Mutex<Option<Array2<f32>>>>, cloned_labels: Arc<Mutex<Option<Vec<usize>>>>) {
+    let dataset = read_data("data/test.csv");
+
+    let receiver = MeanShiftReceiver {result: cloned_result, labels: cloned_labels}.start();
+    let meanshift = MeanShiftActor::new(8).start();
+    meanshift.do_send(MeanShiftMessage { source: Some(receiver.recipient()), data: dataset });
+    sleep(Duration::from_millis(200)).await;
 }
