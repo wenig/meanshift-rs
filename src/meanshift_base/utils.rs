@@ -32,7 +32,7 @@ impl Default for DistanceMeasure {
     }
 }
 
-
+#[derive(Clone)]
 pub struct RefArray(pub ArcArray1<f32>);
 
 impl AsRef<[f32]> for RefArray {

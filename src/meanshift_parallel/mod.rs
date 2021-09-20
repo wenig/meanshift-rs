@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod tests;
+mod interface;
 
 use crate::meanshift_base::{MeanShiftBase, mean_shift_single, RefArray, closest_distance};
 use ndarray::{Array2, Array1, ArcArray2};
@@ -24,7 +25,7 @@ impl MeanShiftParallel {
         self.meanshift.estimate_bandwidth();
 
         let tree = self.meanshift.tree.as_ref().unwrap().clone();
-        let bandwidth = self.meanshift.bandwidth.clone();
+        let bandwidth = self.meanshift.bandwidth.as_ref().expect("You must estimate or give a bandwidth before starting the algorithm!").clone();
         let distance_measure = self.meanshift.distance_measure.clone();
         self.meanshift.means = match &self.meanshift.dataset {
             Some(data) => {

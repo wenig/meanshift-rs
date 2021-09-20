@@ -3,9 +3,10 @@ mod messages;
 #[cfg(test)]
 mod tests;
 mod label_helper;
+mod interface;
 
 use actix::{Actor, ActorContext, Context, Addr, SyncArbiter, Handler, Recipient, AsyncContext};
-use ndarray::{Array1};
+use ndarray::{Array1, Array2};
 use crate::meanshift_actors::helper::MeanShiftHelper;
 pub use crate::meanshift_actors::messages::{MeanShiftMessage, MeanShiftResponse, MeanShiftHelperResponse, MeanShiftHelperWorkMessage};
 
@@ -25,9 +26,12 @@ use crate::meanshift_actors::label_helper::MeanShiftLabelHelper;
 
 use sorted_vec::SortedVec;
 use crate::meanshift_base::{MeanShiftBase};
+use crate::interface::{MeanShiftInterface, Parameters};
+use actix::io::SinkWrite;
+use crate::meanshift_actors::interface::MySink;
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct SortedElement {
     key: usize,
     value: usize
@@ -59,6 +63,7 @@ impl Ord for SortedElement {
     }
 }
 
+#[derive(Clone)]
 pub struct MeanShiftActor {
     meanshift: MeanShiftBase,
     helpers: Option<Addr<MeanShiftHelper>>,
@@ -94,7 +99,7 @@ impl MeanShiftActor {
     fn create_helpers(&mut self) {
         let data = self.meanshift.dataset.as_ref().unwrap().to_shared();
         let tree = self.meanshift.tree.as_ref().unwrap().clone();
-        let bandwidth = self.meanshift.bandwidth;
+        let bandwidth = self.meanshift.bandwidth.as_ref().expect("You must estimate or give a bandwidth before starting the algorithm!").clone();
         let distance_measure = self.meanshift.distance_measure.clone();
 
         self.helpers = Some(SyncArbiter::start(self.n_threads, move || MeanShiftHelper::new(
@@ -104,7 +109,6 @@ impl MeanShiftActor {
 
     fn distribute_data(&mut self, rec: Recipient<MeanShiftHelperResponse>) {
         self.meanshift.estimate_bandwidth();
-        debug!("bandwidth {}", self.meanshift.bandwidth);
         self.meanshift.build_center_tree();
         self.create_helpers();
 
@@ -151,6 +155,8 @@ impl MeanShiftActor {
         }
     }
 }
+
+
 
 impl Handler<MeanShiftMessage> for MeanShiftActor {
     type Result = ();
