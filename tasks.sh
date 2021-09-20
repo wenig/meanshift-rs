@@ -16,6 +16,7 @@ function release-build {
 function release-install {
   release-build
   cd wheels && pip install --force-reinstall -U meanshift_rs-*.whl && cd ..
+  install-py-meanshift
 }
 
 function build-run-tests {
@@ -26,6 +27,10 @@ function build-run-tests {
 function test {
   maturin develop
   pytest tests
+}
+
+function install-py-meanshift {
+  pip install .
 }
 
 "$@"
