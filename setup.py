@@ -3,8 +3,8 @@ from distutils.core import setup
 setup(
     name='meanshift-rs',
     version='0.3.0',
-    packages=['py_meanshift'],
-    package_dir={'py_meanshift': 'py_meanshift'},
+    packages=['meanshift_rs'],
+    package_dir={'meanshift_rs': 'meanshift_rs'},
     url='',
     license='MIT',
     author='Phillip Wenig',
