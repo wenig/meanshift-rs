@@ -31,7 +31,7 @@ bash ./tasks.sh release-install
 ### Python
 
 ```python
-from meanshift_rs import MeanShift
+from meanshift_rs_py import MeanShift
 
 # ... load data
 
