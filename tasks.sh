@@ -30,7 +30,7 @@ function test {
 }
 
 function install-py-meanshift {
-  pip install .
+  python setup.py install
 }
 
 "$@"
