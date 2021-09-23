@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from meanshift_rs import meanshift_algorithm
+from .meanshift_rs import meanshift_algorithm
 from typing import Optional, List
 import numpy as np
 import numpy.typing as npt
