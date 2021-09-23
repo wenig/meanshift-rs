@@ -10,11 +10,11 @@ pub use meanshift_parallel::MeanShiftParallel;
 pub use interface::{MeanShiftInterface, MeanShiftResult};
 
 use pyo3::prelude::*;
-use ndarray::{Array2, arr2};
+use ndarray::{Array2};
 use crate::interface::Parameters;
 use crate::meanshift_base::DistanceMeasure;
 use std::str::FromStr;
-use numpy::{PyArray2, IntoPyArray, PyReadonlyArray, PyReadonlyArray2};
+use numpy::{PyArray2, IntoPyArray, PyReadonlyArray2};
 
 
 #[pyfunction]

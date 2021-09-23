@@ -25,7 +25,7 @@ impl<T> Sink<T> for MySink<T> where T: Unpin + Clone {
         let this = self.get_mut();
         match &this.content {
             Some(content) => {
-                this.sender.send(content.clone());
+                let _r = this.sender.send(content.clone());
                 Poll::Ready(Ok(()))
             },
             None => Poll::Ready(Ok(()))

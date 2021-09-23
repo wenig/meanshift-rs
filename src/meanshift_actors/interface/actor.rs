@@ -1,4 +1,4 @@
-use actix::{Actor, Context, Handler, ResponseActFuture, AsyncContext, System};
+use actix::{Actor, Context, System};
 use actix::io::SinkWrite;
 use crate::meanshift_actors::interface::MySink;
 

@@ -6,7 +6,7 @@ mod label_helper;
 mod interface;
 
 use actix::{Actor, ActorContext, Context, Addr, SyncArbiter, Handler, Recipient, AsyncContext};
-use ndarray::{Array1, Array2};
+use ndarray::{Array1};
 use crate::meanshift_actors::helper::MeanShiftHelper;
 pub use crate::meanshift_actors::messages::{MeanShiftMessage, MeanShiftResponse, MeanShiftHelperResponse, MeanShiftHelperWorkMessage};
 
@@ -26,9 +26,6 @@ use crate::meanshift_actors::label_helper::MeanShiftLabelHelper;
 
 use sorted_vec::SortedVec;
 use crate::meanshift_base::{MeanShiftBase};
-use crate::interface::{MeanShiftInterface, Parameters};
-use actix::io::SinkWrite;
-use crate::meanshift_actors::interface::MySink;
 
 
 #[derive(Debug, Clone)]

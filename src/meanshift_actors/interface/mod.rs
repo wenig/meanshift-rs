@@ -10,7 +10,7 @@ pub use crate::meanshift_actors::interface::sink::MySink;
 use sorted_vec::SortedVec;
 use ndarray::Array2;
 use crate::meanshift_actors::interface::actor::SinkActor;
-use actix::{Actor, Addr, Handler, ContextFutureSpawner};
+use actix::{Actor, Handler};
 use actix::io::SinkWrite;
 use tokio::sync::mpsc;
 use crate::MeanShiftActor;
