@@ -1,6 +1,6 @@
 from sklearn.cluster import MeanShift
-from meanshift_rs_py import MeanShift as MeanShiftRS
-from sklearn.datasets import load_iris, load_wine
+from meanshift_rs import MeanShift as MeanShiftRS
+from sklearn.datasets import load_wine
 import numpy as np
 import timeit
 
@@ -26,7 +26,6 @@ def speed_test():
 
     original_time = timeit.timeit(lambda: run_original(data, 8), number=3)
     print(f"original\t|\t{original_time}")
-
 
 
 if __name__ == "__main__":

@@ -11,7 +11,7 @@ impl Default for Parameters {
         Self {
             n_threads: 1,
             bandwidth: None,
-            distance_measure: DistanceMeasure::SquaredEuclidean
+            distance_measure: DistanceMeasure::default()
         }
     }
 }

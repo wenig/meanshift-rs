@@ -6,8 +6,6 @@ use std::str::FromStr;
 
 #[derive(Clone)]
 pub enum DistanceMeasure {
-    SquaredEuclidean,
-    #[allow(dead_code)]
     Minkowski,
     #[allow(dead_code)]
     Manhattan
@@ -16,7 +14,6 @@ pub enum DistanceMeasure {
 impl DistanceMeasure {
     pub fn call(&self) -> fn(&[f32], &[f32]) -> f32 {
         match self {
-            Self::SquaredEuclidean => squared_euclidean,
             Self::Minkowski => |a, b| {squared_euclidean(a, b).sqrt()},
             Self::Manhattan => |a, b| {
                 a.iter().zip(b.iter()).map(|(a_, b_)| {
@@ -29,7 +26,7 @@ impl DistanceMeasure {
 
 impl Default for DistanceMeasure {
     fn default() -> Self {
-        DistanceMeasure::SquaredEuclidean
+        DistanceMeasure::Minkowski
     }
 }
 
@@ -37,9 +34,7 @@ impl FromStr for DistanceMeasure {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.eq("squared_euclidean") {
-            Ok(Self::SquaredEuclidean)
-        } else if s.eq("minkowski") {
+        if s.eq("minkowski") {
             Ok(Self::Minkowski)
         } else if s.eq("manhattan") {
             Ok(Self::Manhattan)
