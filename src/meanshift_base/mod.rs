@@ -9,6 +9,7 @@ use kdtree::KdTree;
 use num_traits::Float;
 use std::sync::Arc;
 use std::time::{SystemTime};
+use kdtree::distance::squared_euclidean;
 pub(crate) use crate::meanshift_base::utils::{RefArray, DistanceMeasure, SliceComp};
 use log::*;
 pub(crate) use crate::meanshift_base::helper_functions::{closest_distance, mean_shift_single};
@@ -55,8 +56,13 @@ impl MeanShiftBase {
                     tree.add(RefArray(point.to_shared()), i).unwrap();
                 }
 
+                let distance_measure = match &self.distance_measure {
+                    DistanceMeasure::Minkowski => squared_euclidean,
+                    DistanceMeasure::Manhattan => self.distance_measure.call()
+                };
+
                 let bandwidth: f32 = data.axis_iter(Axis(0)).map(|x| {
-                    let nearest = tree.nearest(x.to_slice().unwrap(), n_neighbors, &(self.distance_measure.call())).unwrap();
+                    let nearest = tree.nearest(x.to_slice().unwrap(), n_neighbors, &distance_measure).unwrap();
                     let sum = nearest.into_iter().map(|(dist, _)| dist).fold(f32::min_value(), f32::max);
                     sum.clone()
                 }).sum();
@@ -90,12 +96,17 @@ impl MeanShiftBase {
 
         let mut unique: HashMap<usize, bool> = HashMap::from_iter(self.means.iter().map(|(_, _, _, i)| (*i, true)));
 
+        let distance_fn = match &self.distance_measure {
+            DistanceMeasure::Minkowski => squared_euclidean,
+            DistanceMeasure::Manhattan => self.distance_measure.call()
+        };
+
         for (mean, _, _, i) in self.means.iter(){
             if unique[i] {
                 let neighbor_idxs = self.center_tree.as_ref().unwrap().within(
                     mean.as_slice().unwrap(),
                     self.bandwidth,
-                    &(self.distance_measure.call())).unwrap();
+                    &distance_fn).unwrap();
                 for (_, neighbor) in neighbor_idxs {
                     match unique.get_mut(neighbor) {
                         None => {}
