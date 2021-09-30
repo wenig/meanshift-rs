@@ -14,6 +14,13 @@ pub enum DistanceMeasure {
 }
 
 impl DistanceMeasure {
+    pub fn optimized_call(&self) -> fn(&[LibDataType], &[LibDataType]) -> LibDataType {
+        match self {
+            Self::Minkowski => |a, b| {squared_euclidean(a, b)},
+            _ => self.call()
+        }
+    }
+
     pub fn call(&self) -> fn(&[LibDataType], &[LibDataType]) -> LibDataType {
         match self {
             Self::Minkowski => |a, b| {squared_euclidean(a, b).sqrt()},
