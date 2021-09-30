@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 function test-build {
-  maturin build -o wheels -i $(which python)
+  maturin build --cargo-extra-args="--features python" -o wheels -i $(which python)
 }
 
 function test-install {
@@ -10,7 +10,7 @@ function test-install {
 }
 
 function release-build {
-  maturin build --release -o wheels -i $(which python)
+  maturin build --release --cargo-extra-args="--features python" -o wheels -i $(which python)
 }
 
 function release-install {
