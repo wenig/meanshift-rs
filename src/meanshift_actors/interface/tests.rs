@@ -2,6 +2,7 @@ use crate::MeanShiftActor;
 use crate::interface::{MeanShiftInterface, Parameters};
 use crate::test_utils::read_data;
 use ndarray::{Array2, arr2};
+use crate::meanshift_base::LibDataType;
 
 #[test]
 fn test_interface_for_actor() {
@@ -11,7 +12,7 @@ fn test_interface_for_actor() {
     let dataset = read_data("data/test.csv");
     let (centers, labels) = mean_shift.fit(dataset).expect("No MeanShiftResult was returned!");
 
-    let expects: Array2<f32> = arr2(&[
+    let expects: Array2<LibDataType> = arr2(&[
         [0.5185592, 0.43546146, 0.5697923]
     ]);
 

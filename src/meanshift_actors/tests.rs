@@ -5,9 +5,10 @@ use std::sync::{Arc, Mutex};
 use crate::test_utils::read_data;
 use tokio::time::{Duration};
 use actix_rt::time::sleep;
+use crate::meanshift_base::LibDataType;
 
 struct MeanShiftReceiver {
-    result: Arc<Mutex<Option<Array2<f32>>>>,
+    result: Arc<Mutex<Option<Array2<LibDataType>>>>,
     labels: Arc<Mutex<Option<Vec<usize>>>>
 }
 
@@ -30,7 +31,7 @@ impl Handler<MeanShiftResponse> for MeanShiftReceiver {
 }
 
 
-fn close_l1(a: f32, b: f32, delta: f32) -> bool {
+fn close_l1(a: LibDataType, b: LibDataType, delta: LibDataType) -> bool {
     (a - b).abs() < delta
 }
 
@@ -46,7 +47,7 @@ fn test_runs_meanshift() {
 
     run_system(cloned_result, cloned_labels);
 
-    let expects: Array2<f32> = arr2(&[
+    let expects: Array2<LibDataType> = arr2(&[
         [1.26765306e+01, 2.56051020e+00, 2.34071429e+00, 2.06602040e+01,
         9.50000000e+01, 2.01673469e+00, 1.53959184e+00, 4.02857143e-01,
         1.40938776e+00, 5.00591836e+00, 9.01734694e-01, 2.30122449e+00,
@@ -78,7 +79,7 @@ fn test_runs_meanshift() {
 }
 
 #[actix_rt::main]
-async fn run_system(cloned_result: Arc<Mutex<Option<Array2<f32>>>>, cloned_labels: Arc<Mutex<Option<Vec<usize>>>>) {
+async fn run_system(cloned_result: Arc<Mutex<Option<Array2<LibDataType>>>>, cloned_labels: Arc<Mutex<Option<Vec<usize>>>>) {
     let dataset = read_data("data/wine.csv");
 
     let receiver = MeanShiftReceiver {result: cloned_result, labels: cloned_labels}.start();

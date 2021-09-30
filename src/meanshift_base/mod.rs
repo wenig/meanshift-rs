@@ -12,16 +12,17 @@ use std::time::{SystemTime};
 pub(crate) use crate::meanshift_base::utils::{RefArray, DistanceMeasure, SliceComp};
 use log::*;
 pub(crate) use crate::meanshift_base::helper_functions::{closest_distance, mean_shift_single};
+pub(crate) use crate::meanshift_base::utils::LibDataType;
 
 
 #[derive(Default)]
 pub(crate) struct MeanShiftBase {
-    pub dataset: Option<Array2<f32>>,
-    pub bandwidth: Option<f32>,
-    pub means: Vec<(Array1<f32>, usize, usize, usize)>,
-    pub cluster_centers: Option<Array2<f32>>,
-    pub tree: Option<Arc<KdTree<f32, usize, RefArray>>>,
-    pub center_tree: Option<KdTree<f32, usize, RefArray>>,
+    pub dataset: Option<Array2<LibDataType>>,
+    pub bandwidth: Option<LibDataType>,
+    pub means: Vec<(Array1<LibDataType>, usize, usize, usize)>,
+    pub cluster_centers: Option<Array2<LibDataType>>,
+    pub tree: Option<Arc<KdTree<LibDataType, usize, RefArray>>>,
+    pub center_tree: Option<KdTree<LibDataType, usize, RefArray>>,
     pub distance_measure: DistanceMeasure,
     #[allow(dead_code)]
     pub start_time: Option<SystemTime>
@@ -45,26 +46,26 @@ impl MeanShiftBase {
     pub(crate) fn estimate_bandwidth(&mut self) {
         match self.bandwidth {
             None => {
-                let quantile = 0.3_f32;
+                let quantile = 0.3 as LibDataType;
 
                 match &self.dataset {
                     Some(data) => {
 
-                        let n_neighbors = (data.shape()[0] as f32 * quantile).max(1.0) as usize;
+                        let n_neighbors = (data.shape()[0] as LibDataType * quantile).max(1.0) as usize;
 
                         let mut tree = KdTree::new(data.shape()[1]);
                         for (i, point) in data.axis_iter(Axis(0)).enumerate() {
                             tree.add(RefArray(point.to_shared()), i).unwrap();
                         }
 
-                        let bandwidth: f32 = data.axis_iter(Axis(0)).map(|x| {
+                        let bandwidth: LibDataType = data.axis_iter(Axis(0)).map(|x| {
                             let nearest = tree.nearest(x.to_slice().unwrap(), n_neighbors, &(self.distance_measure.call())).unwrap();
-                            let sum = nearest.into_iter().map(|(dist, _)| dist).fold(f32::min_value(), f32::max);
+                            let sum = nearest.into_iter().map(|(dist, _)| dist).fold(LibDataType::min_value(), LibDataType::max);
                             sum.clone()
                         }).sum();
 
                         self.tree = Some(Arc::new(tree));
-                        self.bandwidth = Some(bandwidth / data.shape()[0] as f32);
+                        self.bandwidth = Some(bandwidth / data.shape()[0] as LibDataType);
                     },
                     _ => panic!("Data not yet set!")
                 }
@@ -113,7 +114,7 @@ impl MeanShiftBase {
 
         let dim = self.means[0].0.len();
 
-        let cluster_centers: Vec<ArrayView2<f32>> =  self.means.iter().filter_map(|(mean, _, _, identifier)| {
+        let cluster_centers: Vec<ArrayView2<LibDataType>> =  self.means.iter().filter_map(|(mean, _, _, identifier)| {
             if unique[identifier] {
                 Some(mean.view().into_shape((1, dim)).unwrap())
             } else {

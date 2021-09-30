@@ -4,6 +4,8 @@ use ndarray::{ArcArray1, Array1};
 use std::cmp::Ordering;
 use std::str::FromStr;
 
+pub type LibDataType = f64;
+
 #[derive(Clone)]
 pub enum DistanceMeasure {
     Minkowski,
@@ -12,7 +14,7 @@ pub enum DistanceMeasure {
 }
 
 impl DistanceMeasure {
-    pub fn call(&self) -> fn(&[f32], &[f32]) -> f32 {
+    pub fn call(&self) -> fn(&[LibDataType], &[LibDataType]) -> LibDataType {
         match self {
             Self::Minkowski => |a, b| {squared_euclidean(a, b).sqrt()},
             Self::Manhattan => |a, b| {
@@ -45,10 +47,10 @@ impl FromStr for DistanceMeasure {
 }
 
 #[derive(Clone)]
-pub struct RefArray(pub ArcArray1<f32>);
+pub struct RefArray(pub ArcArray1<LibDataType>);
 
-impl AsRef<[f32]> for RefArray {
-    fn as_ref(&self) -> &[f32] {
+impl AsRef<[LibDataType]> for RefArray {
+    fn as_ref(&self) -> &[LibDataType] {
         let arc_array = &self.0;
         arc_array.as_slice().unwrap()
     }
@@ -58,7 +60,7 @@ pub trait SliceComp {
     fn slice_cmp(&self, b: &Self) -> Ordering;
 }
 
-impl SliceComp for Array1<f32> {
+impl SliceComp for Array1<LibDataType> {
     fn slice_cmp(&self, other: &Self) -> Ordering {
         debug_assert!(self.len() == other.len());
         let a = self.as_slice().unwrap();

@@ -9,21 +9,12 @@ use actix::{Actor, ActorContext, Context, Addr, SyncArbiter, Handler, Recipient,
 use ndarray::{Array1};
 use crate::meanshift_actors::helper::MeanShiftHelper;
 pub use crate::meanshift_actors::messages::{MeanShiftMessage, MeanShiftResponse, MeanShiftHelperResponse, MeanShiftHelperWorkMessage};
-
-
-
+use crate::meanshift_base::LibDataType;
 use std::cmp::Ordering;
-
-
-
-
-
 use std::time::{SystemTime};
 use log::*;
-
 use crate::meanshift_actors::messages::{MeanShiftLabelHelperResponse, MeanShiftLabelHelperMessage, PoisonPill};
 use crate::meanshift_actors::label_helper::MeanShiftLabelHelper;
-
 use sorted_vec::SortedVec;
 use crate::meanshift_base::{MeanShiftBase};
 
@@ -120,7 +111,7 @@ impl MeanShiftActor {
         }
     }
 
-    fn add_mean(&mut self, mean: Array1<f32>, points_within_len: usize, iterations: usize) {
+    fn add_mean(&mut self, mean: Array1<LibDataType>, points_within_len: usize, iterations: usize) {
         if points_within_len > 0 {
             let identifier = self.meanshift.means.len();
             self.meanshift.means.push((mean, points_within_len, iterations, identifier));
