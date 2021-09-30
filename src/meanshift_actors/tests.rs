@@ -2,7 +2,7 @@ use ndarray::prelude::*;
 use actix::prelude::*;
 use crate::meanshift_actors::*;
 use std::sync::{Arc, Mutex};
-use crate::test_utils::read_data;
+use crate::test_utils::{read_data, close_l1};
 use tokio::time::{Duration};
 use actix_rt::time::sleep;
 use crate::meanshift_base::LibDataType;
@@ -28,11 +28,6 @@ impl Handler<MeanShiftResponse> for MeanShiftReceiver {
         *(self.labels.lock().unwrap()) = Some(msg.labels);
         ctx.stop();
     }
-}
-
-
-fn close_l1(a: LibDataType, b: LibDataType, delta: LibDataType) -> bool {
-    (a - b).abs() < delta
 }
 
 
@@ -70,9 +65,9 @@ fn test_runs_meanshift() {
         0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 0];
 
     let received = (*result.lock().unwrap()).as_ref().unwrap().clone();
-    assert!(close_l1(expects[[0, 0]], received[[0, 0]], 0.01));
-    assert!(close_l1(expects[[0, 1]], received[[0, 1]], 0.01));
-    assert!(close_l1(expects[[0, 2]], received[[0, 2]], 0.01));
+    close_l1(expects[[0, 0]], received[[0, 0]], 0.01);
+    close_l1(expects[[0, 1]], received[[0, 1]], 0.01);
+    close_l1(expects[[0, 2]], received[[0, 2]], 0.01);
 
     let received_labels = (*labels.lock().unwrap()).as_ref().unwrap().clone();
     assert_eq!(expected_labels, received_labels)

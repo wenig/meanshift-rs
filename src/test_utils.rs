@@ -6,7 +6,12 @@ use std::str::FromStr;
 use crate::meanshift_base::LibDataType;
 
 
-pub fn read_data(file_path: &str) -> Array2<LibDataType> {
+pub(crate) fn close_l1(a: LibDataType, b: LibDataType, delta: LibDataType) {
+    assert!((a - b).abs() < delta)
+}
+
+
+pub(crate) fn read_data(file_path: &str) -> Array2<LibDataType> {
     let file = File::open(file_path).unwrap();
     let count_reader = BufReader::new(file);
     let n_lines = count_reader.lines().count() - 1;
