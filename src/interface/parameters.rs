@@ -1,8 +1,8 @@
-use crate::meanshift_base::DistanceMeasure;
+use crate::meanshift_base::{DistanceMeasure, LibDataType};
 
 pub struct Parameters {
     pub n_threads: usize,
-    pub bandwidth: Option<f32>,
+    pub bandwidth: Option<LibDataType>,
     pub distance_measure: DistanceMeasure
 }
 
@@ -11,7 +11,7 @@ impl Default for Parameters {
         Self {
             n_threads: 1,
             bandwidth: None,
-            distance_measure: DistanceMeasure::SquaredEuclidean
+            distance_measure: DistanceMeasure::default()
         }
     }
 }

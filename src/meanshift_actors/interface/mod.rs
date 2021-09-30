@@ -6,6 +6,7 @@ mod actor;
 use anyhow::{Result, Error};
 use crate::interface::{MeanShiftInterface, Parameters, MeanShiftResult};
 use crate::meanshift_base::MeanShiftBase;
+use crate::meanshift_base::LibDataType;
 pub use crate::meanshift_actors::interface::sink::MySink;
 use sorted_vec::SortedVec;
 use ndarray::Array2;
@@ -35,7 +36,7 @@ impl MeanShiftInterface for MeanShiftActor {
         }
     }
 
-    fn fit(&mut self, data: Array2<f32>) -> Result<MeanShiftResult> {
+    fn fit(&mut self, data: Array2<LibDataType>) -> Result<MeanShiftResult> {
         let actor = self.clone();
         actix_rt::System::new().block_on(async move {
             actor_fit(actor, data).await
@@ -54,7 +55,7 @@ impl Handler<MeanShiftResponse> for SinkActor<MeanShiftResult> {
 }
 
 
-async fn actor_fit(actor: MeanShiftActor, data: Array2<f32>) -> Result<MeanShiftResult> {
+async fn actor_fit(actor: MeanShiftActor, data: Array2<LibDataType>) -> Result<MeanShiftResult> {
     let (sender, mut receiver) = mpsc::unbounded_channel();
 
     let sink_actor = SinkActor::create(move |ctx| {

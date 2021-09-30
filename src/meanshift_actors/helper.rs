@@ -1,5 +1,6 @@
 use actix::{Actor, SyncContext, Handler, ActorContext};
 use crate::meanshift_actors::messages::{MeanShiftHelperWorkMessage, PoisonPill};
+use crate::meanshift_base::LibDataType;
 
 use ndarray::prelude::*;
 use kdtree::{KdTree};
@@ -11,14 +12,14 @@ use crate::meanshift_base::{mean_shift_single, RefArray, DistanceMeasure};
 
 
 pub struct MeanShiftHelper {
-    data: ArcArray2<f32>,
-    tree: Arc<KdTree<f32, usize, RefArray>>,
-    bandwidth: f32,
+    data: ArcArray2<LibDataType>,
+    tree: Arc<KdTree<LibDataType, usize, RefArray>>,
+    bandwidth: LibDataType,
     distance_measure: DistanceMeasure
 }
 
 impl MeanShiftHelper {
-    pub fn new(data: ArcArray2<f32>, tree: Arc<KdTree<f32, usize, RefArray>>, bandwidth: f32, distance_measure: DistanceMeasure) -> Self {
+    pub fn new(data: ArcArray2<LibDataType>, tree: Arc<KdTree<LibDataType, usize, RefArray>>, bandwidth: LibDataType, distance_measure: DistanceMeasure) -> Self {
         Self {
             data,
             tree,
@@ -27,7 +28,7 @@ impl MeanShiftHelper {
         }
     }
 
-    fn mean_shift_single(&mut self, seed: usize, bandwidth: f32) -> (Array1<f32>, usize, usize) {
+    fn mean_shift_single(&mut self, seed: usize, bandwidth: LibDataType) -> (Array1<LibDataType>, usize, usize) {
         mean_shift_single(
             self.data.to_shared(),
             self.tree.clone(),

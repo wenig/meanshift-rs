@@ -4,19 +4,18 @@ use ndarray::{ArcArray1, Array1};
 use std::cmp::Ordering;
 use std::str::FromStr;
 
+pub type LibDataType = f64;
+
 #[derive(Clone)]
 pub enum DistanceMeasure {
-    SquaredEuclidean,
-    #[allow(dead_code)]
     Minkowski,
     #[allow(dead_code)]
     Manhattan
 }
 
 impl DistanceMeasure {
-    pub fn call(&self) -> fn(&[f32], &[f32]) -> f32 {
+    pub fn call(&self) -> fn(&[LibDataType], &[LibDataType]) -> LibDataType {
         match self {
-            Self::SquaredEuclidean => squared_euclidean,
             Self::Minkowski => |a, b| {squared_euclidean(a, b).sqrt()},
             Self::Manhattan => |a, b| {
                 a.iter().zip(b.iter()).map(|(a_, b_)| {
@@ -29,7 +28,7 @@ impl DistanceMeasure {
 
 impl Default for DistanceMeasure {
     fn default() -> Self {
-        DistanceMeasure::SquaredEuclidean
+        DistanceMeasure::Minkowski
     }
 }
 
@@ -37,9 +36,7 @@ impl FromStr for DistanceMeasure {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.eq("squared_euclidean") {
-            Ok(Self::SquaredEuclidean)
-        } else if s.eq("minkowski") {
+        if s.eq("minkowski") {
             Ok(Self::Minkowski)
         } else if s.eq("manhattan") {
             Ok(Self::Manhattan)
@@ -50,10 +47,10 @@ impl FromStr for DistanceMeasure {
 }
 
 #[derive(Clone)]
-pub struct RefArray(pub ArcArray1<f32>);
+pub struct RefArray(pub ArcArray1<LibDataType>);
 
-impl AsRef<[f32]> for RefArray {
-    fn as_ref(&self) -> &[f32] {
+impl AsRef<[LibDataType]> for RefArray {
+    fn as_ref(&self) -> &[LibDataType] {
         let arc_array = &self.0;
         arc_array.as_slice().unwrap()
     }
@@ -63,7 +60,7 @@ pub trait SliceComp {
     fn slice_cmp(&self, b: &Self) -> Ordering;
 }
 
-impl SliceComp for Array1<f32> {
+impl SliceComp for Array1<LibDataType> {
     fn slice_cmp(&self, other: &Self) -> Ordering {
         debug_assert!(self.len() == other.len());
         let a = self.as_slice().unwrap();
