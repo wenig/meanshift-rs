@@ -5,8 +5,6 @@ use std::cmp::Ordering;
 
 #[derive(Clone)]
 pub enum DistanceMeasure {
-    SquaredEuclidean,
-    #[allow(dead_code)]
     Minkowski,
     #[allow(dead_code)]
     Manhattan
@@ -15,7 +13,6 @@ pub enum DistanceMeasure {
 impl DistanceMeasure {
     pub fn call(&self) -> fn(&[f32], &[f32]) -> f32 {
         match self {
-            Self::SquaredEuclidean => squared_euclidean,
             Self::Minkowski => |a, b| {squared_euclidean(a, b).sqrt()},
             Self::Manhattan => |a, b| {
                 a.iter().zip(b.iter()).map(|(a_, b_)| {
@@ -28,7 +25,7 @@ impl DistanceMeasure {
 
 impl Default for DistanceMeasure {
     fn default() -> Self {
-        DistanceMeasure::SquaredEuclidean
+        DistanceMeasure::Minkowski
     }
 }
 
