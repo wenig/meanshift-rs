@@ -9,7 +9,6 @@ use kdtree::KdTree;
 use num_traits::Float;
 use std::sync::Arc;
 use std::time::{SystemTime};
-use kdtree::distance::squared_euclidean;
 pub(crate) use crate::meanshift_base::utils::{RefArray, DistanceMeasure, SliceComp};
 use log::*;
 pub(crate) use crate::meanshift_base::helper_functions::{closest_distance, mean_shift_single};
@@ -60,18 +59,16 @@ impl MeanShiftBase {
                         }
 
                         let bandwidth: LibDataType = data.axis_iter(Axis(0)).map(|x| {
-                            let distance_measure = match &self.distance_measure {
-                                DistanceMeasure::Minkowski => squared_euclidean,
-                                DistanceMeasure::Manhattan => self.distance_measure.call()
-                            };
-
                             let nearest = tree.nearest(
                                 x.to_slice().unwrap(),
                                 n_neighbors,
-                                &distance_measure
+                                &self.distance_measure.optimized_call()
                             ).unwrap();
                             let sum = nearest.into_iter().map(|(dist, _)| dist).fold(LibDataType::min_value(), LibDataType::max);
-                            sum.sqrt()
+                            match &self.distance_measure {
+                                DistanceMeasure::Minkowski => sum.sqrt(),
+                                _ => sum
+                            }
                         }).sum();
 
                         self.tree = Some(Arc::new(tree));
@@ -106,17 +103,14 @@ impl MeanShiftBase {
 
         let mut unique: HashMap<usize, bool> = HashMap::from_iter(self.means.iter().map(|(_, _, _, i)| (*i, true)));
 
-        let distance_fn = match &self.distance_measure {
-            DistanceMeasure::Minkowski => squared_euclidean,
-            DistanceMeasure::Manhattan => self.distance_measure.call()
-        };
+        let distance_fn = self.distance_measure.optimized_call();
 
         for (mean, _, _, i) in self.means.iter(){
             if unique[i] {
                 let neighbor_idxs = self.center_tree.as_ref().unwrap().within(
                     mean.as_slice().unwrap(),
                     self.bandwidth.expect("You must estimate or give a bandwidth before starting the algorithm!").powf(2.0),
-                    &(distance_fn)).unwrap();
+                    &distance_fn).unwrap();
                 for (_, neighbor) in neighbor_idxs {
                     match unique.get_mut(neighbor) {
                         None => {}

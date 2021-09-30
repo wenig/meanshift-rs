@@ -1,7 +1,6 @@
 use ndarray::{Axis, ArcArray2, Array1};
 use crate::meanshift_base::utils::{DistanceMeasure, LibDataType, RefArray};
 use std::sync::Arc;
-use kdtree::distance::squared_euclidean;
 use kdtree::KdTree;
 
 pub fn mean_shift_single(data: ArcArray2<LibDataType>, tree: Arc<KdTree<LibDataType, usize, RefArray>>, seed: usize, bandwidth: LibDataType, distance_measure: DistanceMeasure) -> (Array1<LibDataType>, usize, usize) {
@@ -11,8 +10,11 @@ pub fn mean_shift_single(data: ArcArray2<LibDataType>, tree: Arc<KdTree<LibDataT
     let mut my_mean = data.select(Axis(0), &[seed]).mean_axis(Axis(0)).unwrap();
     let mut iterations: usize = 0;
     let mut points_within_len: usize = 0;
+
+    let distance_fn = distance_measure.optimized_call();
+
     loop {
-        let within_result = tree.within(my_mean.as_slice().unwrap(), bandwidth, &(distance_measure.call()));
+        let within_result = tree.within(my_mean.as_slice().unwrap(), bandwidth.powf(2.0), &distance_fn);
         let neighbor_ids: Vec<usize> = match within_result {
             Ok(neighbors) => neighbors.into_iter().map(|(_, x)| x.clone()).collect(),
             Err(_) => break
@@ -36,10 +38,7 @@ pub fn mean_shift_single(data: ArcArray2<LibDataType>, tree: Arc<KdTree<LibDataT
 }
 
 pub fn closest_distance(data: ArcArray2<LibDataType>, point_id: usize, cluster_centers: ArcArray2<LibDataType>, distance_measure: DistanceMeasure) -> usize {
-    let distance_fn = match &distance_measure {
-        DistanceMeasure::Minkowski => squared_euclidean,
-        DistanceMeasure::Manhattan => distance_measure.call()
-    };
+    let distance_fn = distance_measure.optimized_call();
     let point = data.select(Axis(0), &[point_id]).mean_axis(Axis(0)).unwrap();
     cluster_centers.axis_iter(Axis(0)).map(|center| {
         distance_fn(point.as_slice().unwrap(), center.as_slice().unwrap())
