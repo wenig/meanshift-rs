@@ -10,7 +10,7 @@ class MeanShift:
     def __init__(self,
                  n_threads: int = 1,
                  bandwidth: Optional[float] = None,
-                 distance_measure: str = "squared_euclidean"):
+                 distance_measure: str = "minkowski"):
         self.n_threads = n_threads
         self.bandwidth = bandwidth
         self.distance_measure = distance_measure

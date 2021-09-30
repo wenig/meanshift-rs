@@ -22,7 +22,7 @@ fn meanshift_algorithm<'py>(py: Python<'py>, data: PyReadonlyArray2<'py, LibData
         n_threads,
         bandwidth,
         distance_measure: DistanceMeasure::from_str(&distance_measure)
-            .expect(&format!("The distance measure '{}' does not exist! Use one of the following: 'squared_euclidean', 'minkowski', 'manhattan'",
+            .expect(&format!("The distance measure '{}' does not exist! Use one of the following: 'minkowski', 'manhattan'",
                              &distance_measure))
     };
 
