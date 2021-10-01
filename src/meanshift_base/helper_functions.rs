@@ -12,9 +12,13 @@ pub fn mean_shift_single(data: ArcArray2<LibDataType>, tree: Arc<KdTree<LibDataT
     let mut points_within_len: usize = 0;
 
     let distance_fn = distance_measure.optimized_call();
+    let bandwidth = match &distance_measure {
+        DistanceMeasure::Minkowski => bandwidth.powf(2.0),
+        _ => bandwidth
+    };
 
     loop {
-        let within_result = tree.within(my_mean.as_slice().unwrap(), bandwidth.powf(2.0), &distance_fn);
+        let within_result = tree.within(my_mean.as_slice().unwrap(), bandwidth, &distance_fn);
         let neighbor_ids: Vec<usize> = match within_result {
             Ok(neighbors) => neighbors.into_iter().map(|(_, x)| x.clone()).collect(),
             Err(_) => break
