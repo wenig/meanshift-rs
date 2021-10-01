@@ -13,9 +13,9 @@ fn test_runs_meanshift() {
         [0.5185592, 0.43546146, 0.5697923]
     ]);
 
-    assert_eq!(expects[[0, 0]], cluster_centers[[0, 0]]);
-    assert_eq!(expects[[0, 1]], cluster_centers[[0, 1]]);
-    assert_eq!(expects[[0, 2]], cluster_centers[[0, 2]]);
+    assert!((expects[[0, 0]] - cluster_centers[[0, 0]]).abs() < 0.01);
+    assert!((expects[[0, 1]] - cluster_centers[[0, 1]]).abs() < 0.01);
+    assert!((expects[[0, 2]] - cluster_centers[[0, 2]]).abs() < 0.01);
 
     let expected_label = 0;
     received_label.dedup();
