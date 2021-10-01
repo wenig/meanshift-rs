@@ -64,7 +64,10 @@ impl MeanShiftBase {
                 let bandwidth: f32 = data.axis_iter(Axis(0)).map(|x| {
                     let nearest = tree.nearest(x.to_slice().unwrap(), n_neighbors, &distance_measure).unwrap();
                     let sum = nearest.into_iter().map(|(dist, _)| dist).fold(f32::min_value(), f32::max);
-                    sum.clone()
+                    match &self.distance_measure {
+                        DistanceMeasure::Minkowski => sum.sqrt(),
+                        _ => sum
+                    }
                 }).sum();
 
                 self.tree = Some(Arc::new(tree));
