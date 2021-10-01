@@ -101,14 +101,19 @@ impl MeanShiftBase {
 
         let distance_fn = match &self.distance_measure {
             DistanceMeasure::Minkowski => squared_euclidean,
-            DistanceMeasure::Manhattan => self.distance_measure.call()
+            _ => self.distance_measure.call()
+        };
+
+        let bandwidth = match &self.distance_measure {
+            DistanceMeasure::Minkowski => self.bandwidth.powf(2.0),
+            _ => self.bandwidth
         };
 
         for (mean, _, _, i) in self.means.iter(){
             if unique[i] {
                 let neighbor_idxs = self.center_tree.as_ref().unwrap().within(
                     mean.as_slice().unwrap(),
-                    self.bandwidth,
+                    bandwidth,
                     &distance_fn).unwrap();
                 for (_, neighbor) in neighbor_idxs {
                     match unique.get_mut(neighbor) {

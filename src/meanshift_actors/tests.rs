@@ -30,8 +30,6 @@ impl Handler<MeanShiftResponse> for MeanShiftReceiver {
 
 #[test]
 fn test_runs_meanshift() {
-    env_logger::init();
-
     let result = Arc::new(Mutex::new(None));
     let cloned_result = Arc::clone(&result);
     let labels = Arc::new(Mutex::new(None));
@@ -50,9 +48,9 @@ fn test_runs_meanshift() {
         [0.5185592, 0.43546146, 0.5697923]
     ]);
     let received = (*result.lock().unwrap()).as_ref().unwrap().clone();
-    assert_eq!(expects[[0, 0]], received[[0, 0]]);
-    assert_eq!(expects[[0, 1]], received[[0, 1]]);
-    assert_eq!(expects[[0, 2]], received[[0, 2]]);
+    assert!((expects[[0, 0]] - received[[0, 0]]).abs() < 0.01);
+    assert!((expects[[0, 1]] - received[[0, 1]]).abs() < 0.01);
+    assert!((expects[[0, 2]] - received[[0, 2]]).abs() < 0.01);
 
     let expected_label = 0;
     let mut received_label = (*labels.lock().unwrap()).as_ref().unwrap().clone();
@@ -63,8 +61,6 @@ fn test_runs_meanshift() {
 
 #[test]
 fn test_runs_meanshift_on_other_data() {
-    env_logger::init();
-
     let result = Arc::new(Mutex::new(None));
     let cloned_result = Arc::clone(&result);
     let labels = Arc::new(Mutex::new(None));
@@ -86,8 +82,6 @@ fn test_runs_meanshift_on_other_data() {
         [  438.71964364,    92.79452483, -1916.123714  ]
     ]);
     let received = (*result.lock().unwrap()).as_ref().unwrap().clone();
-
-    println!("received {}", received);
 
     assert!((expects[[0, 0]] - received[[0, 0]]).abs() < 0.001);
     assert!((expects[[0, 1]] - received[[0, 1]]).abs() < 0.001);
