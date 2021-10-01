@@ -59,3 +59,42 @@ fn test_runs_meanshift() {
     received_label.dedup();
     assert_eq!(expected_label, received_label[0])
 }
+
+
+#[test]
+fn test_runs_meanshift_on_other_data() {
+    env_logger::init();
+
+    let result = Arc::new(Mutex::new(None));
+    let cloned_result = Arc::clone(&result);
+    let labels = Arc::new(Mutex::new(None));
+    let cloned_labels = Arc::clone(&labels);
+
+
+    let _system = System::run(move || {
+        let dataset = read_data("data/test-intersections.csv");
+
+        let receiver = MeanShiftReceiver {result: cloned_result, labels: cloned_labels}.start();
+        let meanshift = MeanShiftActor::new(8).start();
+        meanshift.do_send(MeanShiftMessage { source: Some(receiver.recipient()), data: dataset });
+    });
+
+    let expects: Array2<f32> = arr2(&[
+        [  299.05692954,   116.91947552,   125.81225114],
+        [  504.2106728,  -1469.84884272, -1807.36713091],
+        [  851.00492619,   896.63606579,  1080.80652407],
+        [  438.71964364,    92.79452483, -1916.123714  ]
+    ]);
+    let received = (*result.lock().unwrap()).as_ref().unwrap().clone();
+
+    println!("received {}", received);
+
+    assert_eq!(expects[[0, 0]], received[[0, 0]]);
+    assert_eq!(expects[[0, 1]], received[[0, 1]]);
+    assert_eq!(expects[[0, 2]], received[[0, 2]]);
+
+    /*let expected_label = 0;
+    let mut received_label = (*labels.lock().unwrap()).as_ref().unwrap().clone();
+    received_label.dedup();
+    assert_eq!(expected_label, received_label[0])*/
+}
