@@ -89,12 +89,7 @@ fn test_runs_meanshift_on_other_data() {
 
     println!("received {}", received);
 
-    assert_eq!(expects[[0, 0]], received[[0, 0]]);
-    assert_eq!(expects[[0, 1]], received[[0, 1]]);
-    assert_eq!(expects[[0, 2]], received[[0, 2]]);
-
-    /*let expected_label = 0;
-    let mut received_label = (*labels.lock().unwrap()).as_ref().unwrap().clone();
-    received_label.dedup();
-    assert_eq!(expected_label, received_label[0])*/
+    assert!((expects[[0, 0]] - received[[0, 0]]).abs() < 0.001);
+    assert!((expects[[0, 1]] - received[[0, 1]]).abs() < 0.001);
+    assert!((expects[[0, 2]] - received[[0, 2]]).abs() < 0.001);
 }
