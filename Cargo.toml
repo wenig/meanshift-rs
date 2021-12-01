@@ -1,12 +1,12 @@
 [package]
 name = "meanshift-rs"
-version = "0.4.4"
+version = "0.4.5"
 authors = ["Phillip Wenig <info@pwenig.de>"]
 edition = "2018"
 
 [lib]
 name = "meanshift_rs"
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 
 [features]
 python = ["pyo3", "numpy"]
