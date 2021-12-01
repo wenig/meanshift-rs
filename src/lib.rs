@@ -6,5 +6,5 @@ mod interface;
 #[cfg(feature = "python")]
 mod python_binding;
 
-pub use meanshift_actors::MeanShiftActor;
+pub use meanshift_actors::{MeanShiftActor, MeanShiftMessage, MeanShiftResponse};
 pub use interface::{MeanShiftInterface, MeanShiftResult};
