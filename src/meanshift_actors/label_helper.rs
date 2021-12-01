@@ -1,6 +1,7 @@
 use actix::{Actor, SyncContext, Handler, ActorContext};
 use crate::meanshift_actors::messages::{MeanShiftLabelHelperMessage, MeanShiftLabelHelperResponse, PoisonPill};
 use ndarray::{ArcArray2};
+use crate::meanshift_base::LibDataType;
 
 
 
@@ -8,13 +9,13 @@ use crate::meanshift_base::{closest_distance, DistanceMeasure};
 
 
 pub struct MeanShiftLabelHelper {
-    data: ArcArray2<f32>,
+    data: ArcArray2<LibDataType>,
     distance_measure: DistanceMeasure,
-    cluster_centers: ArcArray2<f32>
+    cluster_centers: ArcArray2<LibDataType>
 }
 
 impl MeanShiftLabelHelper {
-    pub fn new(data: ArcArray2<f32>, distance_measure: DistanceMeasure, cluster_centers: ArcArray2<f32>) -> Self {
+    pub fn new(data: ArcArray2<LibDataType>, distance_measure: DistanceMeasure, cluster_centers: ArcArray2<LibDataType>) -> Self {
         Self {
             data,
             distance_measure,

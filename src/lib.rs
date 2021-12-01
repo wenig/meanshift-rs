@@ -1,9 +1,10 @@
 mod meanshift_actors;
-mod meanshift_parallel;
 mod meanshift_base;
 #[cfg(test)]
 mod test_utils;
-#[cfg(test)]
-mod tests;
+mod interface;
+#[cfg(feature = "python")]
+mod python_binding;
 
-pub use meanshift_actors::{MeanShiftActor, MeanShiftMessage, MeanShiftResponse};
+pub use meanshift_actors::MeanShiftActor;
+pub use interface::{MeanShiftInterface, MeanShiftResult};
