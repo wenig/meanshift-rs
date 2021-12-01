@@ -1,6 +1,6 @@
 [package]
 name = "meanshift-rs"
-version = "0.4.3"
+version = "0.4.4"
 authors = ["Phillip Wenig <info@pwenig.de>"]
 edition = "2018"
 
