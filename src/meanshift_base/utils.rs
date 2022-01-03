@@ -4,7 +4,7 @@ use ndarray::{ArcArray1, Array1};
 use std::cmp::Ordering;
 use std::str::FromStr;
 
-pub type LibDataType = f64;
+pub type LibDataType = f32;
 
 #[derive(Clone)]
 pub enum DistanceMeasure {
