@@ -5,8 +5,7 @@ mod actor;
 
 use anyhow::{Result, Error};
 use crate::interface::{MeanShiftInterface, Parameters, MeanShiftResult};
-use crate::meanshift_base::MeanShiftBase;
-use crate::meanshift_base::LibDataType;
+use crate::meanshift_base::{LibData, MeanShiftBase};
 pub use crate::meanshift_actors::interface::sink::MySink;
 use sorted_vec::SortedVec;
 use ndarray::Array2;
@@ -17,8 +16,9 @@ use tokio::sync::mpsc;
 use crate::MeanShiftActor;
 use crate::meanshift_actors::{MeanShiftResponse, MeanShiftMessage};
 
-impl MeanShiftInterface for MeanShiftActor {
-    fn init(parameters: Parameters) -> Self {
+
+impl<A: LibData> MeanShiftInterface<A> for MeanShiftActor<A>  {
+    fn init(parameters: Parameters<A>) -> Self {
         Self {
             meanshift: MeanShiftBase {
                 bandwidth: parameters.bandwidth,
@@ -36,7 +36,7 @@ impl MeanShiftInterface for MeanShiftActor {
         }
     }
 
-    fn fit(&mut self, data: Array2<LibDataType>) -> Result<MeanShiftResult> {
+    fn fit(&mut self, data: Array2<A>) -> Result<MeanShiftResult<A>> {
         let actor = self.clone();
         actix_rt::System::new().block_on(async move {
             actor_fit(actor, data).await
@@ -45,17 +45,17 @@ impl MeanShiftInterface for MeanShiftActor {
 }
 
 
-impl Handler<MeanShiftResponse> for SinkActor<MeanShiftResult> {
+impl<A: LibData> Handler<MeanShiftResponse<A>> for SinkActor<MeanShiftResult<A>> {
     type Result = ();
 
-    fn handle(&mut self, msg: MeanShiftResponse, _ctx: &mut Self::Context) -> Self::Result {
+    fn handle(&mut self, msg: MeanShiftResponse<A>, _ctx: &mut Self::Context) -> Self::Result {
         let _ = self.sink.write((msg.cluster_centers, msg.labels));
         self.sink.close()
     }
 }
 
 
-async fn actor_fit(actor: MeanShiftActor, data: Array2<LibDataType>) -> Result<MeanShiftResult> {
+async fn actor_fit<A: LibData>(actor: MeanShiftActor<A>, data: Array2<A>) -> Result<MeanShiftResult<A>>  {
     let (sender, mut receiver) = mpsc::unbounded_channel();
 
     let sink_actor = SinkActor::create(move |ctx| {

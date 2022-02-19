@@ -2,16 +2,15 @@ use ndarray::{Array2, Array1};
 use std::fs::File;
 use std::io::{BufReader, BufRead};
 use csv::{ReaderBuilder, Trim};
-use std::str::FromStr;
-use crate::meanshift_base::LibDataType;
+use crate::meanshift_base::LibData;
 
 
-pub(crate) fn close_l1(a: LibDataType, b: LibDataType, delta: LibDataType) {
+pub(crate) fn close_l1<A: LibData>(a: A, b: A, delta: A) {
     assert!((a - b).abs() < delta)
 }
 
 
-pub(crate) fn read_data(file_path: &str) -> Array2<LibDataType> {
+pub(crate) fn read_data<A: LibData>(file_path: &str) -> Array2<A> {
     let file = File::open(file_path).unwrap();
     let count_reader = BufReader::new(file);
     let n_lines = count_reader.lines().count() - 1;
@@ -22,10 +21,10 @@ pub(crate) fn read_data(file_path: &str) -> Array2<LibDataType> {
     let n_rows = n_lines;
     let n_columns = reader.headers().unwrap().len();
 
-    let flat_data: Array1<LibDataType> = reader.records().into_iter().flat_map(|rec| {
+    let flat_data: Array1<A> = reader.records().into_iter().flat_map(|rec| {
         rec.unwrap().iter().map(|b| {
-            LibDataType::from_str(b).unwrap()
-        }).collect::<Vec<LibDataType>>()
+            A::from_str(b).ok().unwrap()
+        }).collect::<Vec<A>>()
     }).collect();
 
     flat_data.into_shape((n_rows, n_columns)).expect("Could not deserialize sent data")

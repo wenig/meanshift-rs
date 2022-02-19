@@ -1,32 +1,50 @@
 use kdtree::distance::squared_euclidean;
-use std::ops::Sub;
 use ndarray::{ArcArray1, Array1};
 use std::cmp::Ordering;
+use std::fmt::Debug;
+use std::iter::Sum;
 use std::str::FromStr;
+use num_traits::{Float, FromPrimitive};
 
-pub type LibDataType = f64;
+
+pub trait LibData:
+    'static +
+    Unpin +
+    Clone +
+    Send +
+    Default +
+    Sync +
+    Debug +
+    Float +
+    FromPrimitive +
+    Sum +
+    FromStr
+{}
+
+impl LibData for f32 {}
+impl LibData for f64 {}
 
 #[derive(Clone)]
 pub enum DistanceMeasure {
     Minkowski,
     #[allow(dead_code)]
-    Manhattan
+    Manhattan,
 }
 
 impl DistanceMeasure {
-    pub fn optimized_call(&self) -> fn(&[LibDataType], &[LibDataType]) -> LibDataType {
+    pub fn optimized_call<A: LibData>(&self) -> fn(&[A], &[A]) -> A {
         match self {
             Self::Minkowski => |a, b| {squared_euclidean(a, b)},
             _ => self.call()
         }
     }
 
-    pub fn call(&self) -> fn(&[LibDataType], &[LibDataType]) -> LibDataType {
+    pub fn call<A: LibData>(&self) -> fn(&[A], &[A]) -> A {
         match self {
             Self::Minkowski => |a, b| {squared_euclidean(a, b).sqrt()},
             Self::Manhattan => |a, b| {
                 a.iter().zip(b.iter()).map(|(a_, b_)| {
-                    a_.sub(b_).abs()
+                    a_.sub(*b_).abs()
                 }).sum()
             }
         }
@@ -54,10 +72,10 @@ impl FromStr for DistanceMeasure {
 }
 
 #[derive(Clone)]
-pub struct RefArray(pub ArcArray1<LibDataType>);
+pub struct RefArray<A: LibData>(pub ArcArray1<A>);
 
-impl AsRef<[LibDataType]> for RefArray {
-    fn as_ref(&self) -> &[LibDataType] {
+impl<A: LibData> AsRef<[A]> for RefArray<A> {
+    fn as_ref(&self) -> &[A] {
         let arc_array = &self.0;
         arc_array.as_slice().unwrap()
     }
@@ -67,7 +85,7 @@ pub trait SliceComp {
     fn slice_cmp(&self, b: &Self) -> Ordering;
 }
 
-impl SliceComp for Array1<LibDataType> {
+impl<A: LibData> SliceComp for Array1<A> {
     fn slice_cmp(&self, other: &Self) -> Ordering {
         debug_assert!(self.len() == other.len());
         let a = self.as_slice().unwrap();
