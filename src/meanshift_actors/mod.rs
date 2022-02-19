@@ -9,14 +9,13 @@ use actix::{Actor, ActorContext, Context, Addr, SyncArbiter, Handler, Recipient,
 use ndarray::{Array1};
 use crate::meanshift_actors::helper::MeanShiftHelper;
 pub use crate::meanshift_actors::messages::{MeanShiftMessage, MeanShiftResponse, MeanShiftHelperResponse, MeanShiftHelperWorkMessage};
-use crate::meanshift_base::LibDataType;
 use std::cmp::Ordering;
 use std::time::{SystemTime};
 use log::*;
 use crate::meanshift_actors::messages::{MeanShiftLabelHelperResponse, MeanShiftLabelHelperMessage, PoisonPill};
 use crate::meanshift_actors::label_helper::MeanShiftLabelHelper;
 use sorted_vec::SortedVec;
-use crate::meanshift_base::{MeanShiftBase};
+use crate::meanshift_base::{LibData, MeanShiftBase};
 
 
 #[derive(Debug, Clone)]
@@ -52,12 +51,12 @@ impl Ord for SortedElement {
 }
 
 #[derive(Clone)]
-pub struct MeanShiftActor {
-    meanshift: MeanShiftBase,
-    helpers: Option<Addr<MeanShiftHelper>>,
-    label_helpers: Option<Addr<MeanShiftLabelHelper>>,
+pub struct MeanShiftActor<A: LibData>  {
+    meanshift: MeanShiftBase<A>,
+    helpers: Option<Addr<MeanShiftHelper<A>>>,
+    label_helpers: Option<Addr<MeanShiftLabelHelper<A>>>,
     n_threads: usize,
-    receiver: Option<Recipient<MeanShiftResponse>>,
+    receiver: Option<Recipient<MeanShiftResponse<A>>>,
     centers_sent: usize,
     distances_sent: usize,
     #[allow(dead_code)]
@@ -65,11 +64,11 @@ pub struct MeanShiftActor {
     labels: SortedVec<SortedElement>
 }
 
-impl Actor for MeanShiftActor {
+impl<A: LibData> Actor for MeanShiftActor<A>  {
     type Context = Context<Self>;
 }
 
-impl MeanShiftActor {
+impl<A: LibData> MeanShiftActor<A>  {
     pub fn new(n_threads: usize) -> Self {
         Self {
             meanshift: Default::default(),
@@ -95,7 +94,7 @@ impl MeanShiftActor {
         )));
     }
 
-    fn distribute_data(&mut self, rec: Recipient<MeanShiftHelperResponse>) {
+    fn distribute_data(&mut self, rec: Recipient<MeanShiftHelperResponse<A>>) {
         self.meanshift.estimate_bandwidth();
         self.meanshift.build_center_tree();
         self.create_helpers();
@@ -111,7 +110,7 @@ impl MeanShiftActor {
         }
     }
 
-    fn add_mean(&mut self, mean: Array1<LibDataType>, points_within_len: usize, iterations: usize) {
+    fn add_mean(&mut self, mean: Array1<A>, points_within_len: usize, iterations: usize) {
         if points_within_len > 0 {
             let identifier = self.meanshift.means.len();
             self.meanshift.means.push((mean, points_within_len, iterations, identifier));
@@ -146,10 +145,10 @@ impl MeanShiftActor {
 
 
 
-impl Handler<MeanShiftMessage> for MeanShiftActor {
+impl<A: LibData> Handler<MeanShiftMessage<A>> for MeanShiftActor<A>  {
     type Result = ();
 
-    fn handle(&mut self, msg: MeanShiftMessage, ctx: &mut Self::Context) -> Self::Result {
+    fn handle(&mut self, msg: MeanShiftMessage<A>, ctx: &mut Self::Context) -> Self::Result {
         match &self.meanshift.dataset {
             None => {
                 self.meanshift.dataset = Some(msg.data);
@@ -161,10 +160,10 @@ impl Handler<MeanShiftMessage> for MeanShiftActor {
     }
 }
 
-impl Handler<MeanShiftHelperResponse> for MeanShiftActor {
+impl<A: LibData> Handler<MeanShiftHelperResponse<A>> for MeanShiftActor<A>  {
     type Result = ();
 
-    fn handle(&mut self, msg: MeanShiftHelperResponse, ctx: &mut Self::Context) -> Self::Result {
+    fn handle(&mut self, msg: MeanShiftHelperResponse<A>, ctx: &mut Self::Context) -> Self::Result {
         self.add_mean(msg.mean, msg.points_within_len, msg.iterations);
 
         if self.meanshift.means.len() == self.meanshift.dataset.as_ref().unwrap().shape()[0] {
@@ -180,7 +179,7 @@ impl Handler<MeanShiftHelperResponse> for MeanShiftActor {
     }
 }
 
-impl Handler<MeanShiftLabelHelperResponse> for MeanShiftActor {
+impl<A: LibData> Handler<MeanShiftLabelHelperResponse> for MeanShiftActor<A>  {
     type Result = ();
 
     fn handle(&mut self, msg: MeanShiftLabelHelperResponse, ctx: &mut Self::Context) -> Self::Result {

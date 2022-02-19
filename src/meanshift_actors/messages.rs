@@ -1,34 +1,34 @@
 use actix::prelude::*;
 use ndarray::{Array2, Array1};
-use crate::meanshift_base::LibDataType;
+use crate::meanshift_base::LibData;
 
 
 #[derive(Message)]
 #[rtype(Result = "()")]
-pub struct MeanShiftMessage {
-    pub source: Option<Recipient<MeanShiftResponse>>,
-    pub data: Array2<LibDataType>
+pub struct MeanShiftMessage<A: LibData> {
+    pub source: Option<Recipient<MeanShiftResponse<A>>>,
+    pub data: Array2<A>
 }
 
 #[derive(Message)]
 #[rtype(Result = "()")]
-pub struct MeanShiftResponse {
-    pub cluster_centers: Array2<LibDataType>,
+pub struct MeanShiftResponse<A> {
+    pub cluster_centers: Array2<A>,
     pub labels: Vec<usize>
 }
 
 #[derive(Message)]
 #[rtype(Result = "()")]
-pub struct MeanShiftHelperWorkMessage {
-    pub source: Recipient<MeanShiftHelperResponse>,
+pub struct MeanShiftHelperWorkMessage<A: LibData> {
+    pub source: Recipient<MeanShiftHelperResponse<A>>,
     pub start_center: usize
 }
 
 #[derive(Message)]
 #[rtype(Result = "()")]
-pub struct MeanShiftHelperResponse {
-    pub source: Recipient<MeanShiftHelperWorkMessage>,
-    pub mean: Array1<LibDataType>,
+pub struct MeanShiftHelperResponse<A: LibData> {
+    pub source: Recipient<MeanShiftHelperWorkMessage<A>>,
+    pub mean: Array1<A>,
     pub points_within_len: usize,
     pub iterations: usize
 }

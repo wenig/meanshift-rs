@@ -1,6 +1,5 @@
 use actix::{Actor, SyncContext, Handler, ActorContext};
 use crate::meanshift_actors::messages::{MeanShiftHelperWorkMessage, PoisonPill};
-use crate::meanshift_base::LibDataType;
 
 use ndarray::prelude::*;
 use kdtree::{KdTree};
@@ -8,18 +7,19 @@ use ndarray::{ArcArray2};
 
 use crate::meanshift_actors::{MeanShiftHelperResponse};
 use std::sync::Arc;
-use crate::meanshift_base::{mean_shift_single, RefArray, DistanceMeasure};
+use crate::meanshift_base::{mean_shift_single, RefArray, DistanceMeasure, LibData};
 
 
-pub struct MeanShiftHelper {
-    data: ArcArray2<LibDataType>,
-    tree: Arc<KdTree<LibDataType, usize, RefArray>>,
-    bandwidth: LibDataType,
+pub struct MeanShiftHelper<A: LibData>
+{
+    data: ArcArray2<A>,
+    tree: Arc<KdTree<A, usize, RefArray<A>>>,
+    bandwidth: A,
     distance_measure: DistanceMeasure
 }
 
-impl MeanShiftHelper {
-    pub fn new(data: ArcArray2<LibDataType>, tree: Arc<KdTree<LibDataType, usize, RefArray>>, bandwidth: LibDataType, distance_measure: DistanceMeasure) -> Self {
+impl<A: LibData> MeanShiftHelper<A>  {
+    pub fn new(data: ArcArray2<A>, tree: Arc<KdTree<A, usize, RefArray<A>>>, bandwidth: A, distance_measure: DistanceMeasure) -> Self {
         Self {
             data,
             tree,
@@ -28,7 +28,7 @@ impl MeanShiftHelper {
         }
     }
 
-    fn mean_shift_single(&mut self, seed: usize, bandwidth: LibDataType) -> (Array1<LibDataType>, usize, usize) {
+    fn mean_shift_single(&mut self, seed: usize, bandwidth: A) -> (Array1<A>, usize, usize) {
         mean_shift_single(
             self.data.to_shared(),
             self.tree.clone(),
@@ -39,20 +39,20 @@ impl MeanShiftHelper {
     }
 }
 
-impl Actor for MeanShiftHelper {
+impl<A: LibData> Actor for MeanShiftHelper<A>  {
     type Context = SyncContext<Self>;
 }
 
-impl Handler<MeanShiftHelperWorkMessage> for MeanShiftHelper {
+impl<A: LibData> Handler<MeanShiftHelperWorkMessage<A>> for MeanShiftHelper<A>  {
     type Result = ();
 
-    fn handle(&mut self, msg: MeanShiftHelperWorkMessage, ctx: &mut Self::Context) -> Self::Result {
+    fn handle(&mut self, msg: MeanShiftHelperWorkMessage<A>, ctx: &mut Self::Context) -> Self::Result {
         let (mean, points_within_len, iterations) = self.mean_shift_single(msg.start_center, self.bandwidth);
         msg.source.do_send(MeanShiftHelperResponse { source: ctx.address().recipient(), mean, points_within_len, iterations }).unwrap();
     }
 }
 
-impl Handler<PoisonPill> for MeanShiftHelper {
+impl<A: LibData> Handler<PoisonPill> for MeanShiftHelper<A>  {
     type Result = ();
 
     fn handle(&mut self, _msg: PoisonPill, ctx: &mut Self::Context) -> Self::Result {

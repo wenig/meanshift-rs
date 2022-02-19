@@ -1,11 +1,12 @@
 use pyo3::prelude::*;
 use ndarray::{Array2};
 use crate::interface::Parameters;
-use crate::meanshift_base::{DistanceMeasure, LibDataType};
+use crate::meanshift_base::{DistanceMeasure};
 use crate::{MeanShiftActor, MeanShiftInterface};
 use std::str::FromStr;
 use numpy::{PyArray2, IntoPyArray, PyReadonlyArray2};
 
+type LibDataType = f64;
 
 #[pyfunction]
 fn meanshift_algorithm<'py>(py: Python<'py>, data: PyReadonlyArray2<'py, LibDataType>, n_threads: usize, bandwidth: Option<LibDataType>, distance_measure: String) -> PyResult<(&'py PyArray2<LibDataType>, Vec<usize>)> {

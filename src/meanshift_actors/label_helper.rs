@@ -1,21 +1,19 @@
 use actix::{Actor, SyncContext, Handler, ActorContext};
 use crate::meanshift_actors::messages::{MeanShiftLabelHelperMessage, MeanShiftLabelHelperResponse, PoisonPill};
 use ndarray::{ArcArray2};
-use crate::meanshift_base::LibDataType;
 
 
+use crate::meanshift_base::{closest_distance, DistanceMeasure, LibData};
 
-use crate::meanshift_base::{closest_distance, DistanceMeasure};
 
-
-pub struct MeanShiftLabelHelper {
-    data: ArcArray2<LibDataType>,
+pub struct MeanShiftLabelHelper<A> {
+    data: ArcArray2<A>,
     distance_measure: DistanceMeasure,
-    cluster_centers: ArcArray2<LibDataType>
+    cluster_centers: ArcArray2<A>
 }
 
-impl MeanShiftLabelHelper {
-    pub fn new(data: ArcArray2<LibDataType>, distance_measure: DistanceMeasure, cluster_centers: ArcArray2<LibDataType>) -> Self {
+impl<A: LibData> MeanShiftLabelHelper<A> {
+    pub fn new(data: ArcArray2<A>, distance_measure: DistanceMeasure, cluster_centers: ArcArray2<A>) -> Self {
         Self {
             data,
             distance_measure,
@@ -33,11 +31,11 @@ impl MeanShiftLabelHelper {
     }
 }
 
-impl Actor for MeanShiftLabelHelper {
+impl<A: LibData> Actor for MeanShiftLabelHelper<A> {
     type Context = SyncContext<Self>;
 }
 
-impl Handler<MeanShiftLabelHelperMessage> for MeanShiftLabelHelper {
+impl<A: LibData> Handler<MeanShiftLabelHelperMessage> for MeanShiftLabelHelper<A> {
     type Result = ();
 
     fn handle(&mut self, msg: MeanShiftLabelHelperMessage, ctx: &mut Self::Context) -> Self::Result {
@@ -46,7 +44,7 @@ impl Handler<MeanShiftLabelHelperMessage> for MeanShiftLabelHelper {
     }
 }
 
-impl Handler<PoisonPill> for MeanShiftLabelHelper {
+impl<A: LibData> Handler<PoisonPill> for MeanShiftLabelHelper<A> {
     type Result = ();
 
     fn handle(&mut self, _msg: PoisonPill, ctx: &mut Self::Context) -> Self::Result {
