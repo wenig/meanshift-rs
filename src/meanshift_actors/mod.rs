@@ -8,7 +8,7 @@ mod interface;
 use actix::{Actor, ActorContext, Context, Addr, SyncArbiter, Handler, Recipient, AsyncContext};
 use ndarray::{Array1};
 use crate::meanshift_actors::helper::MeanShiftHelper;
-pub use crate::meanshift_actors::messages::{MeanShiftMessage, MeanShiftResponse, MeanShiftHelperResponse, MeanShiftHelperWorkMessage};
+pub use crate::meanshift_actors::messages::{MeanShiftMessage, MeanShiftHelperResponse, MeanShiftHelperWorkMessage};
 use std::cmp::Ordering;
 use std::time::{SystemTime};
 use log::*;
@@ -16,6 +16,7 @@ use crate::meanshift_actors::messages::{MeanShiftLabelHelperResponse, MeanShiftL
 use crate::meanshift_actors::label_helper::MeanShiftLabelHelper;
 use sorted_vec::SortedVec;
 use crate::meanshift_base::{LibData, MeanShiftBase};
+use crate::utils::ClusteringResponse;
 
 
 #[derive(Debug, Clone)]
@@ -56,7 +57,7 @@ pub struct MeanShiftActor<A: LibData>  {
     helpers: Option<Addr<MeanShiftHelper<A>>>,
     label_helpers: Option<Addr<MeanShiftLabelHelper<A>>>,
     n_threads: usize,
-    receiver: Option<Recipient<MeanShiftResponse<A>>>,
+    receiver: Option<Recipient<ClusteringResponse<A>>>,
     centers_sent: usize,
     distances_sent: usize,
     #[allow(dead_code)]
@@ -190,9 +191,9 @@ impl<A: LibData> Handler<MeanShiftLabelHelperResponse> for MeanShiftActor<A>  {
             self.label_helpers.as_ref().unwrap().do_send(PoisonPill);
             match &self.receiver {
                 Some(recipient) => {
-                    let cluster_centers = self.meanshift.cluster_centers.as_ref().unwrap().clone();
+                    let cluster_centers = (*self.meanshift.cluster_centers.as_ref().unwrap()).clone();
                     let labels = self.labels.iter().map(|x| x.value).collect();
-                    recipient.do_send(MeanShiftResponse { cluster_centers, labels } ).unwrap();
+                    recipient.do_send(ClusteringResponse { cluster_centers, labels } ).unwrap();
                 },
                 None => ()
             }
