@@ -1,20 +1,14 @@
 use actix::prelude::*;
 use ndarray::{Array2, Array1};
+use crate::ClusteringResponse;
 use crate::meanshift_base::LibData;
 
 
 #[derive(Message)]
 #[rtype(Result = "()")]
 pub struct MeanShiftMessage<A: LibData> {
-    pub source: Option<Recipient<MeanShiftResponse<A>>>,
+    pub source: Option<Recipient<ClusteringResponse<A>>>,
     pub data: Array2<A>
-}
-
-#[derive(Message)]
-#[rtype(Result = "()")]
-pub struct MeanShiftResponse<A> {
-    pub cluster_centers: Array2<A>,
-    pub labels: Vec<usize>
 }
 
 #[derive(Message)]

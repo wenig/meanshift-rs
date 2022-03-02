@@ -21,10 +21,10 @@ impl<A: LibData> Actor for MeanShiftReceiver<A> {
     }
 }
 
-impl<A: LibData> Handler<MeanShiftResponse<A>> for MeanShiftReceiver<A> {
+impl<A: LibData> Handler<ClusteringResponse<A>> for MeanShiftReceiver<A> {
     type Result = ();
 
-    fn handle(&mut self, msg: MeanShiftResponse<A>, ctx: &mut Self::Context) -> Self::Result {
+    fn handle(&mut self, msg: ClusteringResponse<A>, ctx: &mut Self::Context) -> Self::Result {
         *(self.result.lock().unwrap()) = Some(msg.cluster_centers);
         *(self.labels.lock().unwrap()) = Some(msg.labels);
         ctx.stop();

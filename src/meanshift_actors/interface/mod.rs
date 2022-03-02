@@ -13,8 +13,8 @@ use crate::meanshift_actors::interface::actor::SinkActor;
 use actix::{Actor, Handler};
 use actix::io::SinkWrite;
 use tokio::sync::mpsc;
-use crate::MeanShiftActor;
-use crate::meanshift_actors::{MeanShiftResponse, MeanShiftMessage};
+use crate::{ClusteringResponse, MeanShiftActor};
+use crate::meanshift_actors::MeanShiftMessage;
 
 
 impl<A: LibData> MeanShiftInterface<A> for MeanShiftActor<A>  {
@@ -45,10 +45,10 @@ impl<A: LibData> MeanShiftInterface<A> for MeanShiftActor<A>  {
 }
 
 
-impl<A: LibData> Handler<MeanShiftResponse<A>> for SinkActor<MeanShiftResult<A>> {
+impl<A: LibData> Handler<ClusteringResponse<A>> for SinkActor<MeanShiftResult<A>> {
     type Result = ();
 
-    fn handle(&mut self, msg: MeanShiftResponse<A>, _ctx: &mut Self::Context) -> Self::Result {
+    fn handle(&mut self, msg: ClusteringResponse<A>, _ctx: &mut Self::Context) -> Self::Result {
         let _ = self.sink.write((msg.cluster_centers, msg.labels));
         self.sink.close()
     }

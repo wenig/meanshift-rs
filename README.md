@@ -5,7 +5,7 @@
 [![coverage report](https://gitlab.hpi.de/phillip.wenig/meanshift-rs/badges/main/coverage.svg)](https://gitlab.hpi.de/phillip.wenig/meanshift-rs/-/commits/main)
 
 
-[![Git tag](https://img.shields.io/badge/tag-0.5.0-blue?style=for-the-badge)](./Cargo.toml)
+[![Git tag](https://img.shields.io/badge/tag-0.6.0-blue?style=for-the-badge)](./Cargo.toml)
 </div>
 
 ## Install
