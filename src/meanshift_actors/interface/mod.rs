@@ -1,23 +1,22 @@
+mod actor;
+mod sink;
 #[cfg(test)]
 mod tests;
-mod sink;
-mod actor;
 
-use anyhow::{Result, Error};
-use crate::interface::{MeanShiftInterface, Parameters, MeanShiftResult};
-use crate::meanshift_base::{LibData, MeanShiftBase};
-pub use crate::meanshift_actors::interface::sink::MySink;
-use sorted_vec::SortedVec;
-use ndarray::Array2;
+use crate::interface::{MeanShiftInterface, MeanShiftResult, Parameters};
 use crate::meanshift_actors::interface::actor::SinkActor;
-use actix::{Actor, Handler};
-use actix::io::SinkWrite;
-use tokio::sync::mpsc;
-use crate::{ClusteringResponse, MeanShiftActor};
+pub use crate::meanshift_actors::interface::sink::MySink;
 use crate::meanshift_actors::MeanShiftMessage;
+use crate::meanshift_base::{LibData, MeanShiftBase};
+use crate::{ClusteringResponse, MeanShiftActor};
+use actix::io::SinkWrite;
+use actix::{Actor, Handler};
+use anyhow::{Error, Result};
+use ndarray::Array2;
+use sorted_vec::SortedVec;
+use tokio::sync::mpsc;
 
-
-impl<A: LibData> MeanShiftInterface<A> for MeanShiftActor<A>  {
+impl<A: LibData> MeanShiftInterface<A> for MeanShiftActor<A> {
     fn init(parameters: Parameters<A>) -> Self {
         Self {
             meanshift: MeanShiftBase {
@@ -32,18 +31,15 @@ impl<A: LibData> MeanShiftInterface<A> for MeanShiftActor<A>  {
             centers_sent: 0,
             distances_sent: 0,
             start_time: None,
-            labels: SortedVec::new()
+            labels: SortedVec::new(),
         }
     }
 
     fn fit(&mut self, data: Array2<A>) -> Result<MeanShiftResult<A>> {
         let actor = self.clone();
-        actix_rt::System::new().block_on(async move {
-            actor_fit(actor, data).await
-        })
+        actix_rt::System::new().block_on(async move { actor_fit(actor, data).await })
     }
 }
-
 
 impl<A: LibData> Handler<ClusteringResponse<A>> for SinkActor<MeanShiftResult<A>> {
     type Result = ();
@@ -54,8 +50,10 @@ impl<A: LibData> Handler<ClusteringResponse<A>> for SinkActor<MeanShiftResult<A>
     }
 }
 
-
-async fn actor_fit<A: LibData>(actor: MeanShiftActor<A>, data: Array2<A>) -> Result<MeanShiftResult<A>>  {
+async fn actor_fit<A: LibData>(
+    actor: MeanShiftActor<A>,
+    data: Array2<A>,
+) -> Result<MeanShiftResult<A>> {
     let (sender, mut receiver) = mpsc::unbounded_channel();
 
     let sink_actor = SinkActor::create(move |ctx| {
@@ -66,10 +64,10 @@ async fn actor_fit<A: LibData>(actor: MeanShiftActor<A>, data: Array2<A>) -> Res
     let addr = actor.start();
     addr.do_send(MeanShiftMessage {
         source: Some(sink_actor.recipient()),
-        data
+        data,
     });
 
-    if let Some(r) = receiver.recv().await{
+    if let Some(r) = receiver.recv().await {
         Ok(r)
     } else {
         Err(Error::msg("Await resulted in None value!"))

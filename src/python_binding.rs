@@ -1,15 +1,21 @@
-use pyo3::prelude::*;
-use ndarray::{Array2};
 use crate::interface::Parameters;
-use crate::meanshift_base::{DistanceMeasure};
+use crate::meanshift_base::DistanceMeasure;
 use crate::{MeanShiftActor, MeanShiftInterface};
+use ndarray::Array2;
+use numpy::{IntoPyArray, PyArray2, PyReadonlyArray2};
+use pyo3::prelude::*;
 use std::str::FromStr;
-use numpy::{PyArray2, IntoPyArray, PyReadonlyArray2};
 
 type LibDataType = f64;
 
 #[pyfunction]
-fn meanshift_algorithm<'py>(py: Python<'py>, data: PyReadonlyArray2<'py, LibDataType>, n_threads: usize, bandwidth: Option<LibDataType>, distance_measure: String) -> PyResult<(&'py PyArray2<LibDataType>, Vec<usize>)> {
+fn meanshift_algorithm<'py>(
+    py: Python<'py>,
+    data: PyReadonlyArray2<'py, LibDataType>,
+    n_threads: usize,
+    bandwidth: Option<LibDataType>,
+    distance_measure: String,
+) -> PyResult<(&'py PyArray2<LibDataType>, Vec<usize>)> {
     let data: Array2<LibDataType> = data.as_array().to_owned();
     let parameters = Parameters {
         n_threads,
@@ -25,7 +31,6 @@ fn meanshift_algorithm<'py>(py: Python<'py>, data: PyReadonlyArray2<'py, LibData
     let (array, labels) = result.expect("Could not fit a model to the given data!");
     Ok((array.into_pyarray(py), labels))
 }
-
 
 #[pymodule]
 fn meanshift_rs(_py: Python, m: &PyModule) -> PyResult<()> {

@@ -1,33 +1,36 @@
 mod helper;
+mod interface;
+mod label_helper;
 mod messages;
 #[cfg(test)]
 mod tests;
-mod label_helper;
-mod interface;
 
-use actix::{Actor, ActorContext, Context, Addr, SyncArbiter, Handler, Recipient, AsyncContext};
-use ndarray::{Array1};
 use crate::meanshift_actors::helper::MeanShiftHelper;
-pub use crate::meanshift_actors::messages::{MeanShiftMessage, MeanShiftHelperResponse, MeanShiftHelperWorkMessage};
-use std::cmp::Ordering;
-use std::time::{SystemTime};
-use log::*;
-use crate::meanshift_actors::messages::{MeanShiftLabelHelperResponse, MeanShiftLabelHelperMessage, PoisonPill};
 use crate::meanshift_actors::label_helper::MeanShiftLabelHelper;
-use sorted_vec::SortedVec;
+pub use crate::meanshift_actors::messages::{
+    MeanShiftHelperResponse, MeanShiftHelperWorkMessage, MeanShiftMessage,
+};
+use crate::meanshift_actors::messages::{
+    MeanShiftLabelHelperMessage, MeanShiftLabelHelperResponse, PoisonPill,
+};
 use crate::meanshift_base::{LibData, MeanShiftBase};
 use crate::utils::ClusteringResponse;
-
+use actix::{Actor, ActorContext, Addr, AsyncContext, Context, Handler, Recipient, SyncArbiter};
+use log::*;
+use ndarray::Array1;
+use sorted_vec::SortedVec;
+use std::cmp::Ordering;
+use std::time::SystemTime;
 
 #[derive(Debug, Clone)]
 struct SortedElement {
     key: usize,
-    value: usize
+    value: usize,
 }
 
 impl SortedElement {
     pub fn new(key: usize, value: usize) -> Self {
-        Self {key, value}
+        Self { key, value }
     }
 }
 
@@ -52,7 +55,7 @@ impl Ord for SortedElement {
 }
 
 #[derive(Clone)]
-pub struct MeanShiftActor<A: LibData>  {
+pub struct MeanShiftActor<A: LibData> {
     meanshift: MeanShiftBase<A>,
     helpers: Option<Addr<MeanShiftHelper<A>>>,
     label_helpers: Option<Addr<MeanShiftLabelHelper<A>>>,
@@ -62,14 +65,14 @@ pub struct MeanShiftActor<A: LibData>  {
     distances_sent: usize,
     #[allow(dead_code)]
     start_time: Option<SystemTime>,
-    labels: SortedVec<SortedElement>
+    labels: SortedVec<SortedElement>,
 }
 
-impl<A: LibData> Actor for MeanShiftActor<A>  {
+impl<A: LibData> Actor for MeanShiftActor<A> {
     type Context = Context<Self>;
 }
 
-impl<A: LibData> MeanShiftActor<A>  {
+impl<A: LibData> MeanShiftActor<A> {
     pub fn new(n_threads: usize) -> Self {
         Self {
             meanshift: Default::default(),
@@ -80,19 +83,28 @@ impl<A: LibData> MeanShiftActor<A>  {
             centers_sent: 0,
             distances_sent: 0,
             start_time: None,
-            labels: SortedVec::new()
+            labels: SortedVec::new(),
         }
     }
 
     fn create_helpers(&mut self) {
         let data = self.meanshift.dataset.as_ref().unwrap().to_shared();
         let tree = self.meanshift.tree.as_ref().unwrap().clone();
-        let bandwidth = *self.meanshift.bandwidth.as_ref().expect("You must estimate or give a bandwidth before starting the algorithm!");
+        let bandwidth = *self
+            .meanshift
+            .bandwidth
+            .as_ref()
+            .expect("You must estimate or give a bandwidth before starting the algorithm!");
         let distance_measure = self.meanshift.distance_measure.clone();
 
-        self.helpers = Some(SyncArbiter::start(self.n_threads, move || MeanShiftHelper::new(
-            data.clone(), tree.clone(), bandwidth, distance_measure.clone()
-        )));
+        self.helpers = Some(SyncArbiter::start(self.n_threads, move || {
+            MeanShiftHelper::new(
+                data.clone(),
+                tree.clone(),
+                bandwidth,
+                distance_measure.clone(),
+            )
+        }));
     }
 
     fn distribute_data(&mut self, rec: Recipient<MeanShiftHelperResponse<A>>) {
@@ -100,21 +112,28 @@ impl<A: LibData> MeanShiftActor<A>  {
         self.meanshift.build_center_tree();
         self.create_helpers();
 
-        let n_clusters = self.n_threads.min(self.meanshift.dataset.as_ref().unwrap().shape()[0]);
+        let n_clusters = self
+            .n_threads
+            .min(self.meanshift.dataset.as_ref().unwrap().shape()[0]);
 
         self.centers_sent = n_clusters;
         for t in 0..n_clusters {
-            self.helpers.as_ref().unwrap().do_send(MeanShiftHelperWorkMessage {
-                source: rec.clone(),
-                start_center: t
-            });
+            self.helpers
+                .as_ref()
+                .unwrap()
+                .do_send(MeanShiftHelperWorkMessage {
+                    source: rec.clone(),
+                    start_center: t,
+                });
         }
     }
 
     fn add_mean(&mut self, mean: Array1<A>, points_within_len: usize, iterations: usize) {
         if points_within_len > 0 {
             let identifier = self.meanshift.means.len();
-            self.meanshift.means.push((mean, points_within_len, iterations, identifier));
+            self.meanshift
+                .means
+                .push((mean, points_within_len, iterations, identifier));
         }
     }
 
@@ -122,31 +141,44 @@ impl<A: LibData> MeanShiftActor<A>  {
         self.meanshift.collect_means();
 
         let arc_cluster_centers = self.meanshift.cluster_centers.as_ref().unwrap().to_shared();
-        let data = self.meanshift.dataset.as_ref().unwrap().clone().into_shared();
+        let data = self
+            .meanshift
+            .dataset
+            .as_ref()
+            .unwrap()
+            .clone()
+            .into_shared();
         let distance_measure = self.meanshift.distance_measure.clone();
 
-        self.label_helpers = Some(SyncArbiter::start(self.n_threads, move || MeanShiftLabelHelper::new(
-            data.clone(), distance_measure.clone(), arc_cluster_centers.clone()
-        )));
+        self.label_helpers = Some(SyncArbiter::start(self.n_threads, move || {
+            MeanShiftLabelHelper::new(
+                data.clone(),
+                distance_measure.clone(),
+                arc_cluster_centers.clone(),
+            )
+        }));
 
         self.distribute_distance_calculation(rec)
     }
 
     fn distribute_distance_calculation(&mut self, rec: Recipient<MeanShiftLabelHelperResponse>) {
-        let n_clusters = self.n_threads.min(self.meanshift.dataset.as_ref().unwrap().shape()[0]);
+        let n_clusters = self
+            .n_threads
+            .min(self.meanshift.dataset.as_ref().unwrap().shape()[0]);
         self.distances_sent = n_clusters;
         for t in 0..n_clusters {
-            self.label_helpers.as_ref().unwrap().do_send(MeanShiftLabelHelperMessage {
-                source: rec.clone(),
-                point_id: t
-            });
+            self.label_helpers
+                .as_ref()
+                .unwrap()
+                .do_send(MeanShiftLabelHelperMessage {
+                    source: rec.clone(),
+                    point_id: t,
+                });
         }
     }
 }
 
-
-
-impl<A: LibData> Handler<MeanShiftMessage<A>> for MeanShiftActor<A>  {
+impl<A: LibData> Handler<MeanShiftMessage<A>> for MeanShiftActor<A> {
     type Result = ();
 
     fn handle(&mut self, msg: MeanShiftMessage<A>, ctx: &mut Self::Context) -> Self::Result {
@@ -158,7 +190,7 @@ impl<A: LibData> Handler<MeanShiftMessage<A>> for MeanShiftActor<A>  {
     }
 }
 
-impl<A: LibData> Handler<MeanShiftHelperResponse<A>> for MeanShiftActor<A>  {
+impl<A: LibData> Handler<MeanShiftHelperResponse<A>> for MeanShiftActor<A> {
     type Result = ();
 
     fn handle(&mut self, msg: MeanShiftHelperResponse<A>, ctx: &mut Self::Context) -> Self::Result {
@@ -172,33 +204,54 @@ impl<A: LibData> Handler<MeanShiftHelperResponse<A>> for MeanShiftActor<A>  {
         } else if self.centers_sent < self.meanshift.dataset.as_ref().unwrap().shape()[0] {
             let start_center = self.centers_sent;
             self.centers_sent += 1;
-            msg.source.do_send(MeanShiftHelperWorkMessage { source: ctx.address().recipient(), start_center }).unwrap();
+            msg.source
+                .do_send(MeanShiftHelperWorkMessage {
+                    source: ctx.address().recipient(),
+                    start_center,
+                })
+                .unwrap();
         }
     }
 }
 
-impl<A: LibData> Handler<MeanShiftLabelHelperResponse> for MeanShiftActor<A>  {
+impl<A: LibData> Handler<MeanShiftLabelHelperResponse> for MeanShiftActor<A> {
     type Result = ();
 
-    fn handle(&mut self, msg: MeanShiftLabelHelperResponse, ctx: &mut Self::Context) -> Self::Result {
-        self.labels.insert(SortedElement::new(msg.point_id, msg.label));
+    fn handle(
+        &mut self,
+        msg: MeanShiftLabelHelperResponse,
+        ctx: &mut Self::Context,
+    ) -> Self::Result {
+        self.labels
+            .insert(SortedElement::new(msg.point_id, msg.label));
 
         let len = self.meanshift.dataset.as_ref().unwrap().shape()[0];
         if self.labels.len() == len {
             self.label_helpers.as_ref().unwrap().do_send(PoisonPill);
             match &self.receiver {
                 Some(recipient) => {
-                    let cluster_centers = (*self.meanshift.cluster_centers.as_ref().unwrap()).clone();
+                    let cluster_centers =
+                        (*self.meanshift.cluster_centers.as_ref().unwrap()).clone();
                     let labels = self.labels.iter().map(|x| x.value).collect();
-                    recipient.do_send(ClusteringResponse { cluster_centers, labels } ).unwrap();
-                },
-                None => ()
+                    recipient
+                        .do_send(ClusteringResponse {
+                            cluster_centers,
+                            labels,
+                        })
+                        .unwrap();
+                }
+                None => (),
             }
             ctx.stop();
         } else if self.distances_sent < len {
             let point_id = self.distances_sent;
             self.distances_sent += 1;
-            msg.source.do_send(MeanShiftLabelHelperMessage { source: ctx.address().recipient(), point_id }).unwrap();
+            msg.source
+                .do_send(MeanShiftLabelHelperMessage {
+                    source: ctx.address().recipient(),
+                    point_id,
+                })
+                .unwrap();
         }
     }
 }

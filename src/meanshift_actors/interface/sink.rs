@@ -3,22 +3,30 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 use tokio::sync::mpsc;
 
-
-pub struct MySink<T> where T: Unpin {
+pub struct MySink<T>
+where
+    T: Unpin,
+{
     sender: mpsc::UnboundedSender<T>,
-    content: Option<T>
+    content: Option<T>,
 }
 
-impl<T> MySink<T> where T: Unpin {
+impl<T> MySink<T>
+where
+    T: Unpin,
+{
     pub fn new(sender: mpsc::UnboundedSender<T>) -> Self {
         MySink {
             sender,
-            content: None
+            content: None,
         }
     }
 }
 
-impl<T> Sink<T> for MySink<T> where T: Unpin + Clone {
+impl<T> Sink<T> for MySink<T>
+where
+    T: Unpin + Clone,
+{
     type Error = ();
 
     fn poll_ready(self: Pin<&mut Self>, _ctx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
@@ -27,8 +35,8 @@ impl<T> Sink<T> for MySink<T> where T: Unpin + Clone {
             Some(content) => {
                 let _r = this.sender.send(content.clone());
                 Poll::Ready(Ok(()))
-            },
-            None => Poll::Ready(Ok(()))
+            }
+            None => Poll::Ready(Ok(())),
         }
     }
 

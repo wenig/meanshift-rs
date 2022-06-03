@@ -1,6 +1,6 @@
 pub use crate::interface::parameters::Parameters;
-use ndarray::Array2;
 use anyhow::Result;
+use ndarray::Array2;
 
 mod parameters;
 

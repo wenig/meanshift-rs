@@ -1,9 +1,9 @@
-use crate::meanshift_base::{DistanceMeasure};
+use crate::meanshift_base::DistanceMeasure;
 
 pub struct Parameters<A> {
     pub n_threads: usize,
     pub bandwidth: Option<A>,
-    pub distance_measure: DistanceMeasure
+    pub distance_measure: DistanceMeasure,
 }
 
 impl<A> Default for Parameters<A> {
@@ -11,7 +11,7 @@ impl<A> Default for Parameters<A> {
         Self {
             n_threads: 1,
             bandwidth: None,
-            distance_measure: DistanceMeasure::default()
+            distance_measure: DistanceMeasure::default(),
         }
     }
 }

@@ -1,25 +1,15 @@
 use kdtree::distance::squared_euclidean;
 use ndarray::{ArcArray1, Array1};
+use num_traits::{Float, FromPrimitive};
 use std::cmp::Ordering;
 use std::fmt::Debug;
 use std::iter::Sum;
 use std::str::FromStr;
-use num_traits::{Float, FromPrimitive};
-
 
 pub trait LibData:
-    'static +
-    Unpin +
-    Clone +
-    Send +
-    Default +
-    Sync +
-    Debug +
-    Float +
-    FromPrimitive +
-    Sum +
-    FromStr
-{}
+    'static + Unpin + Clone + Send + Default + Sync + Debug + Float + FromPrimitive + Sum + FromStr
+{
+}
 
 impl LibData for f32 {}
 impl LibData for f64 {}
@@ -34,19 +24,20 @@ pub enum DistanceMeasure {
 impl DistanceMeasure {
     pub fn optimized_call<A: LibData>(&self) -> fn(&[A], &[A]) -> A {
         match self {
-            Self::Minkowski => |a, b| {squared_euclidean(a, b)},
-            _ => self.call()
+            Self::Minkowski => |a, b| squared_euclidean(a, b),
+            _ => self.call(),
         }
     }
 
     pub fn call<A: LibData>(&self) -> fn(&[A], &[A]) -> A {
         match self {
-            Self::Minkowski => |a, b| {squared_euclidean(a, b).sqrt()},
+            Self::Minkowski => |a, b| squared_euclidean(a, b).sqrt(),
             Self::Manhattan => |a, b| {
-                a.iter().zip(b.iter()).map(|(a_, b_)| {
-                    a_.sub(*b_).abs()
-                }).sum()
-            }
+                a.iter()
+                    .zip(b.iter())
+                    .map(|(a_, b_)| a_.sub(*b_).abs())
+                    .sum()
+            },
         }
     }
 }
@@ -93,7 +84,7 @@ impl<A: LibData> SliceComp for Array1<A> {
         for i in 0..b.len() {
             let cmp = a[i].partial_cmp(&b[i]).unwrap();
             if cmp.ne(&Ordering::Equal) {
-                return cmp
+                return cmp;
             }
         }
         Ordering::Equal
