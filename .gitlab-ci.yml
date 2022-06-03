@@ -1,0 +1,71 @@
+default:
+  before_script:
+    - rustc --version
+    - cargo --version
+    - sed -i "s/ssh:\/\/git/https:\/\/gitlab-ci-token:$CI_JOB_TOKEN/" Cargo.toml
+    - apt-get update
+    - apt-get install -y gfortran
+    - apt-get install -y build-essential
+
+stages:
+  - style
+  - test
+  - deploy
+
+linting:
+  image: "gitlab.hpi.de/akita/dependency_proxy/containers/rust:latest"
+  stage: style
+  tags:
+    - akita
+  script:
+    - rustup component add clippy
+    - cargo clippy
+
+formatting:
+  image: "gitlab.hpi.de/akita/dependency_proxy/containers/rust:latest"
+  stage: style
+  tags:
+    - akita
+  script:
+    - rustup component add rustfmt
+    - cargo fmt -- --check
+
+coverage:
+  image: "gitlab.hpi.de/akita/dependency_proxy/containers/rustdocker/rust:nightly" 
+  stage: test
+  tags:
+    - akita
+  variables:
+    RUSTFLAGS: "-Cinstrument-coverage"
+    LLVM_PROFILE_FILE: "coverage-%p-%m.profraw"
+  script:
+    - apt-get install -y python3-pip
+    - rustup component add llvm-tools-preview
+    - cargo test
+    # generate html report
+    - cargo install grcov
+    - grcov . --binary-path ./target/debug/ -s . -t html --branch --ignore-not-existing --ignore "*cargo*" -o ./coverage/
+    # generate cobertura report for gitlab integration
+    - pip3 install lcov_cobertura
+    - grcov . --binary-path ./target/debug/ -s . -t lcov --branch --ignore-not-existing --ignore "*cargo*" -o coverage.lcov
+    - python3 /usr/local/lib/python3.*/dist-packages/lcov_cobertura/lcov_cobertura.py coverage.lcov
+    # output coverage summary for gitlab parsing
+    - apt-get update && apt-get install -y lcov
+    - lcov --summary coverage.lcov
+  artifacts:
+    paths:
+      - 'coverage'
+    reports:
+      cobertura: coverage.xml
+
+deploy-cargo:
+  image: "gitlab.hpi.de/akita/dependency_proxy/containers/rust:latest"
+  stage: deploy
+  only:
+    - main
+  tags:
+    - akita
+  variables:
+    CARGO_REGISTRY_TOKEN: $CARGO_REGISTRY_TOKEN
+  script:
+    - cargo publish --token=${CARGO_REGISTRY_TOKEN}
