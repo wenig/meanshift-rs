@@ -1,15 +1,41 @@
+use crate::meanshift_actors::interface::MySink;
 use crate::meanshift_actors::*;
 use crate::meanshift_base::LibData;
 use crate::test_utils::{close_l1, read_data};
 use actix::prelude::*;
-use actix_rt::time::sleep;
 use ndarray::prelude::*;
-use std::sync::{Arc, Mutex};
-use tokio::time::Duration;
+use actix::io::SinkWrite;
+use tokio::sync::mpsc;
+use anyhow::{Error, Result};
 
-struct MeanShiftReceiver<A> {
-    result: Arc<Mutex<Option<Array2<A>>>>,
-    labels: Arc<Mutex<Option<Vec<usize>>>>,
+type TestResult<A> = (Array2<A>, Vec<usize>);
+
+struct MeanShiftReceiver<A: LibData> {
+    sink: SinkWrite<TestResult<A>, MySink<TestResult<A>>>
+}
+
+impl<A: LibData> MeanShiftReceiver<A> {
+    pub fn new(sink: SinkWrite<TestResult<A>, MySink<TestResult<A>>>) -> Self {
+        Self {
+            sink
+        }
+    }
+
+    pub fn start_new(sender: mpsc::UnboundedSender<TestResult<A>>) -> Addr<Self> {
+        Self::create(move |ctx| {
+            let sink = MySink::new(sender);
+            Self::new(SinkWrite::new(sink, ctx))
+        })
+    }
+}
+
+impl<A: LibData> actix::io::WriteHandler<()> for MeanShiftReceiver<A>
+where
+    A: Unpin + 'static + Clone,
+{
+    fn finished(&mut self, _ctxt: &mut Self::Context) {
+        System::current().stop();
+    }
 }
 
 impl<A: LibData> Actor for MeanShiftReceiver<A> {
@@ -24,22 +50,13 @@ impl<A: LibData> Handler<ClusteringResponse<A>> for MeanShiftReceiver<A> {
     type Result = ();
 
     fn handle(&mut self, msg: ClusteringResponse<A>, ctx: &mut Self::Context) -> Self::Result {
-        *(self.result.lock().unwrap()) = Some(msg.cluster_centers);
-        *(self.labels.lock().unwrap()) = Some(msg.labels);
-        ctx.stop();
+        self.sink.write((msg.cluster_centers, msg.labels)).expect("Writing to sink failed!");
     }
 }
 
 #[test]
 fn test_runs_meanshift() {
     env_logger::init();
-
-    let result = Arc::new(Mutex::new(None));
-    let cloned_result = Arc::clone(&result);
-    let labels = Arc::new(Mutex::new(None));
-    let cloned_labels = Arc::clone(&labels);
-
-    run_system(cloned_result, cloned_labels);
 
     let expects: Array2<f32> = arr2(&[
         [
@@ -98,31 +115,26 @@ fn test_runs_meanshift() {
         0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 0,
     ];
 
-    let received = (*result.lock().unwrap()).as_ref().unwrap().clone();
-    close_l1(expects[[0, 0]], received[[0, 0]], 0.01);
-    close_l1(expects[[0, 1]], received[[0, 1]], 0.01);
-    close_l1(expects[[0, 2]], received[[0, 2]], 0.01);
+    let (cluster_centers, labels) = run_system().unwrap();
 
-    let received_labels = (*labels.lock().unwrap()).as_ref().unwrap().clone();
-    assert_eq!(expected_labels, received_labels)
+    close_l1(expects[[0, 0]], cluster_centers[[0, 0]], 0.01);
+    close_l1(expects[[0, 1]], cluster_centers[[0, 1]], 0.01);
+    close_l1(expects[[0, 2]], cluster_centers[[0, 2]], 0.01);
+
+    assert_eq!(expected_labels, labels)
 }
 
 #[actix_rt::main]
-async fn run_system(
-    cloned_result: Arc<Mutex<Option<Array2<f32>>>>,
-    cloned_labels: Arc<Mutex<Option<Vec<usize>>>>,
-) {
+async fn run_system<A: LibData>() -> Result<TestResult<A>> {
+    let (sender, mut receiver) = mpsc::unbounded_channel();
     let dataset = read_data("data/wine.csv");
 
-    let receiver = MeanShiftReceiver {
-        result: cloned_result,
-        labels: cloned_labels,
-    }
-    .start();
+    let ms_receiver = MeanShiftReceiver::start_new(sender);
     let meanshift = MeanShiftActor::new(8).start();
     meanshift.do_send(MeanShiftMessage {
-        source: Some(receiver.recipient()),
+        source: Some(ms_receiver.recipient()),
         data: dataset,
     });
-    sleep(Duration::from_millis(500)).await;
+
+    receiver.recv().await.ok_or_else(|| Error::msg("No value received!"))
 }
