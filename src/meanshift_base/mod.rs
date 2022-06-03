@@ -99,7 +99,7 @@ impl<A: LibData> MeanShiftBase<A>  {
 
         let tree = self.center_tree.as_mut().unwrap();
         for (point, _, _, i) in self.means.iter() {
-            tree.add(RefArray(point.to_shared()), i.clone()).unwrap();
+            tree.add(RefArray(point.to_shared()), *i).unwrap();
         }
 
         let mut unique: HashMap<usize, bool> = HashMap::from_iter(self.means.iter().map(|(_, _, _, i)| (*i, true)));
@@ -141,13 +141,13 @@ impl<A: LibData> Clone for MeanShiftBase<A> {
     fn clone(&self) -> Self {
         Self {
             dataset: self.dataset.clone(),
-            bandwidth: self.bandwidth.clone(),
+            bandwidth: self.bandwidth,
             means: self.means.clone(),
             cluster_centers: self.cluster_centers.clone(),
             tree: None,
             center_tree: None,
             distance_measure: self.distance_measure.clone(),
-            start_time: self.start_time.clone()
+            start_time: self.start_time
         }
     }
 }

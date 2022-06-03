@@ -23,7 +23,7 @@ pub fn mean_shift_single<A: LibData>(data: ArcArray2<A>, tree: Arc<KdTree<A, usi
     loop {
         let within_result = tree.within(my_mean.as_slice().unwrap(), bandwidth, &distance_fn);
         let neighbor_ids: Vec<usize> = match within_result {
-            Ok(neighbors) => neighbors.into_iter().map(|(_, x)| x.clone()).collect(),
+            Ok(neighbors) => neighbors.into_iter().map(|(_, x)| *x).collect(),
             Err(_) => break
         };
 

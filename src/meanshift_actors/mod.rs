@@ -87,7 +87,7 @@ impl<A: LibData> MeanShiftActor<A>  {
     fn create_helpers(&mut self) {
         let data = self.meanshift.dataset.as_ref().unwrap().to_shared();
         let tree = self.meanshift.tree.as_ref().unwrap().clone();
-        let bandwidth = self.meanshift.bandwidth.as_ref().expect("You must estimate or give a bandwidth before starting the algorithm!").clone();
+        let bandwidth = *self.meanshift.bandwidth.as_ref().expect("You must estimate or give a bandwidth before starting the algorithm!");
         let distance_measure = self.meanshift.distance_measure.clone();
 
         self.helpers = Some(SyncArbiter::start(self.n_threads, move || MeanShiftHelper::new(
@@ -150,13 +150,10 @@ impl<A: LibData> Handler<MeanShiftMessage<A>> for MeanShiftActor<A>  {
     type Result = ();
 
     fn handle(&mut self, msg: MeanShiftMessage<A>, ctx: &mut Self::Context) -> Self::Result {
-        match &self.meanshift.dataset {
-            None => {
-                self.meanshift.dataset = Some(msg.data);
-                self.receiver = msg.source;
-                self.distribute_data(ctx.address().recipient())
-            },
-            _ => ()
+        if self.meanshift.dataset.is_none() {
+            self.meanshift.dataset = Some(msg.data);
+            self.receiver = msg.source;
+            self.distribute_data(ctx.address().recipient())
         }
     }
 }
