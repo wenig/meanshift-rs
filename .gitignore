@@ -4,3 +4,4 @@ Cargo.lock
 .idea
 meanshift_rs/__pycache__
 wheels
+coverage
