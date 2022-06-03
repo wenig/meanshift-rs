@@ -2,23 +2,21 @@ use crate::meanshift_actors::interface::MySink;
 use crate::meanshift_actors::*;
 use crate::meanshift_base::LibData;
 use crate::test_utils::{close_l1, read_data};
-use actix::prelude::*;
-use ndarray::prelude::*;
 use actix::io::SinkWrite;
-use tokio::sync::mpsc;
+use actix::prelude::*;
 use anyhow::{Error, Result};
+use ndarray::prelude::*;
+use tokio::sync::mpsc;
 
 type TestResult<A> = (Array2<A>, Vec<usize>);
 
 struct MeanShiftReceiver<A: LibData> {
-    sink: SinkWrite<TestResult<A>, MySink<TestResult<A>>>
+    sink: SinkWrite<TestResult<A>, MySink<TestResult<A>>>,
 }
 
 impl<A: LibData> MeanShiftReceiver<A> {
     pub fn new(sink: SinkWrite<TestResult<A>, MySink<TestResult<A>>>) -> Self {
-        Self {
-            sink
-        }
+        Self { sink }
     }
 
     pub fn start_new(sender: mpsc::UnboundedSender<TestResult<A>>) -> Addr<Self> {
@@ -50,7 +48,9 @@ impl<A: LibData> Handler<ClusteringResponse<A>> for MeanShiftReceiver<A> {
     type Result = ();
 
     fn handle(&mut self, msg: ClusteringResponse<A>, ctx: &mut Self::Context) -> Self::Result {
-        self.sink.write((msg.cluster_centers, msg.labels)).expect("Writing to sink failed!");
+        self.sink
+            .write((msg.cluster_centers, msg.labels))
+            .expect("Writing to sink failed!");
     }
 }
 
@@ -136,5 +136,8 @@ async fn run_system<A: LibData>() -> Result<TestResult<A>> {
         data: dataset,
     });
 
-    receiver.recv().await.ok_or_else(|| Error::msg("No value received!"))
+    receiver
+        .recv()
+        .await
+        .ok_or_else(|| Error::msg("No value received!"))
 }
