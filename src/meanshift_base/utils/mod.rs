@@ -1,3 +1,5 @@
+mod dtw;
+
 use kdtree::distance::squared_euclidean;
 use ndarray::{ArcArray1, Array1};
 use num_traits::{Float, FromPrimitive};
@@ -5,6 +7,7 @@ use std::cmp::Ordering;
 use std::fmt::Debug;
 use std::iter::Sum;
 use std::str::FromStr;
+use crate::meanshift_base::DistanceMeasure::{DTW, Manhattan, Minkowski};
 
 pub trait LibData:
     'static + Unpin + Clone + Send + Default + Sync + Debug + Float + FromPrimitive + Sum + FromStr
@@ -19,6 +22,7 @@ pub enum DistanceMeasure {
     Minkowski,
     #[allow(dead_code)]
     Manhattan,
+    DTW
 }
 
 impl DistanceMeasure {
@@ -38,6 +42,7 @@ impl DistanceMeasure {
                     .map(|(a_, b_)| a_.sub(*b_).abs())
                     .sum()
             },
+            Self::DTW => |a, b| dtw::dtw(a, b)
         }
     }
 }
@@ -52,12 +57,11 @@ impl FromStr for DistanceMeasure {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.eq("minkowski") {
-            Ok(Self::Minkowski)
-        } else if s.eq("manhattan") {
-            Ok(Self::Manhattan)
-        } else {
-            Err(())
+        match s {
+            "minkowski" => Ok(Minkowski),
+            "manhattan" => Ok(Manhattan),
+            "dtw" => Ok(DTW),
+            _ => Err(())
         }
     }
 }

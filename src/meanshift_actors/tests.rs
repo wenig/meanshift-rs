@@ -1,12 +1,14 @@
 use crate::meanshift_actors::interface::MySink;
 use crate::meanshift_actors::*;
-use crate::meanshift_base::LibData;
+use crate::meanshift_base::{DistanceMeasure, LibData};
 use crate::test_utils::{close_l1, read_data};
 use actix::io::SinkWrite;
 use actix::prelude::*;
 use anyhow::{Error, Result};
 use ndarray::prelude::*;
 use tokio::sync::mpsc;
+use crate::interface::Parameters;
+use crate::MeanShiftInterface;
 
 type TestResult<A> = (Array2<A>, Vec<usize>);
 
@@ -79,7 +81,41 @@ fn test_runs_meanshift() {
         1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
     ];
 
-    let (cluster_centers, labels) = run_system().unwrap();
+    let (cluster_centers, labels) = run_system(DistanceMeasure::Minkowski).unwrap();
+
+    close_l1(expects[[0, 0]], cluster_centers[[0, 0]], 2.0);
+    close_l1(expects[[0, 1]], cluster_centers[[0, 1]], 2.0);
+    close_l1(expects[[0, 2]], cluster_centers[[0, 2]], 2.0);
+
+    assert_eq!(expected_labels, labels)
+}
+
+#[test]
+fn test_runs_meanshift_dtw() {
+    env_logger::init();
+
+    let expects: Array2<f32> = arr2(&[
+        [100., 100., 100., 100., 100., 100., 100., 100., 100., 100.],
+        [0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+        [
+            -100., -100., -100., -100., -100., -100., -100., -100., -100., -100.,
+        ],
+    ]);
+
+    let expected_labels: Vec<usize> = vec![
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    ];
+
+    let (cluster_centers, labels) = run_system(DistanceMeasure::DTW).unwrap();
 
     close_l1(expects[[0, 0]], cluster_centers[[0, 0]], 2.0);
     close_l1(expects[[0, 1]], cluster_centers[[0, 1]], 2.0);
@@ -89,12 +125,16 @@ fn test_runs_meanshift() {
 }
 
 #[actix_rt::main]
-async fn run_system<A: LibData>() -> Result<TestResult<A>> {
+async fn run_system<A: LibData>(distance_measure: DistanceMeasure) -> Result<TestResult<A>> {
     let (sender, mut receiver) = mpsc::unbounded_channel();
     let dataset = read_data("data/cluster.csv");
 
     let ms_receiver = MeanShiftReceiver::start_new(sender);
-    let meanshift = MeanShiftActor::new(8).start();
+    let mut parameters = Parameters::default();
+    parameters.distance_measure = distance_measure;
+    parameters.n_threads = 8;
+
+    let meanshift = MeanShiftActor::init(parameters).start();
     meanshift.do_send(MeanShiftMessage {
         source: Some(ms_receiver.recipient()),
         data: dataset,
