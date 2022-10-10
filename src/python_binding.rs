@@ -21,7 +21,7 @@ fn meanshift_algorithm<'py>(
         n_threads,
         bandwidth,
         distance_measure: DistanceMeasure::from_str(&distance_measure)
-            .expect(&format!("The distance measure '{}' does not exist! Use one of the following: 'minkowski', 'manhattan'",
+            .expect(&format!("The distance measure '{}' does not exist! Use one of the following: 'minkowski', 'manhattan', or 'dtw'",
                              &distance_measure))
     };
 
