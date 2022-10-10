@@ -1,3 +1,6 @@
+mod dba;
+pub use dba::dba;
+
 use crate::meanshift_base::LibData;
 
 pub fn dtw<A: LibData>(a: &[A], b: &[A]) -> A {

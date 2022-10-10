@@ -6,6 +6,7 @@ mod python_binding;
 #[cfg(test)]
 mod test_utils;
 mod utils;
+mod parallel;
 
 pub use interface::{MeanShiftInterface, MeanShiftResult};
 pub use meanshift_actors::{MeanShiftActor, MeanShiftMessage};

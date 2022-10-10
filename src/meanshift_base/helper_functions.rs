@@ -19,6 +19,7 @@ pub fn mean_shift_single<A: LibData>(
     let mut points_within_len: usize = 0;
 
     let distance_fn = distance_measure.optimized_call();
+    let mean_fn = distance_measure.mean_call();
     let bandwidth = match &distance_measure {
         DistanceMeasure::Minkowski => bandwidth.powf(A::from(2.0).unwrap()),
         _ => bandwidth,

@@ -1,7 +1,7 @@
 mod dtw;
 
 use kdtree::distance::squared_euclidean;
-use ndarray::{ArcArray1, Array1};
+use ndarray::{ArcArray1, Array1, ArrayView2, Axis};
 use num_traits::{Float, FromPrimitive};
 use std::cmp::Ordering;
 use std::fmt::Debug;
@@ -17,7 +17,7 @@ pub trait LibData:
 impl LibData for f32 {}
 impl LibData for f64 {}
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub enum DistanceMeasure {
     Minkowski,
     #[allow(dead_code)]
@@ -28,8 +28,17 @@ pub enum DistanceMeasure {
 impl DistanceMeasure {
     pub fn optimized_call<A: LibData>(&self) -> fn(&[A], &[A]) -> A {
         match self {
-            Self::Minkowski => |a, b| squared_euclidean(a, b),
+            Minkowski => |a, b| squared_euclidean(a, b),
             _ => self.call(),
+        }
+    }
+
+    pub fn mean_call<A: LibData>(&self) -> fn(ArrayView2<A>) -> Array1<A> {
+        match self {
+            DTW => |a| dba(a, b),
+            _ => |a| {
+                a.mean_axis(Axis(0)).unwrap()
+            }
         }
     }
 
