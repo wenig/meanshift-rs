@@ -8,8 +8,7 @@ fn test_parallel_meanshift() {
     let mut mean_shift = MeanShift::<f64>::default();
 
     let dataset = read_data("data/test.csv");
-    mean_shift.dataset = Some(dataset);
-    let labels = mean_shift.cluster();
+    let labels = mean_shift.cluster(dataset.to_shared());
 
     assert_eq!(100, labels.len());
     assert_eq!(0, labels.into_iter().sum());

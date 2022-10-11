@@ -16,28 +16,21 @@ use crate::meanshift_base::utils::SliceComp;
 
 #[derive(Default)]
 pub(crate) struct MeanShift<A: LibData> {
-    pub dataset: Option<Array2<A>>,  // todo: must this be Option?
     pub bandwidth: Option<A>,
-    pub means: Vec<(Array1<A>, usize, usize, usize)>,
     pub cluster_centers: Option<Array2<A>>,
     pub tree: Option<Arc<KdTree<A, usize, RefArray<A>>>>,
     pub center_tree: Option<KdTree<A, usize, RefArray<A>>>,
     pub distance_measure: DistanceMeasure,
-    #[allow(dead_code)]
-    pub start_time: Option<SystemTime>,
 }
 
 impl<A: LibData> MeanShift<A> {
     pub fn new(distance_measure: DistanceMeasure) -> Self {
         Self {
-            dataset: None,
             bandwidth: None,
-            means: vec![],
             cluster_centers: None,
             tree: None,
             center_tree: None,
             distance_measure,
-            start_time: None
         }
     }
 
@@ -46,65 +39,61 @@ impl<A: LibData> MeanShift<A> {
         Self::new(distance_measure)
     }
 
-    fn build_center_tree(&mut self) {
-        self.center_tree = Some(KdTree::new(self.dataset.as_ref().unwrap().shape()[1]));
+    fn build_center_tree(&mut self, data: ArcArray2<A>) {
+        let columns = data.shape()[1].clone();
+        self.center_tree = Some(KdTree::new(columns));
     }
 
-    fn estimate_bandwidth(&mut self) {
+    fn estimate_bandwidth(&mut self, data: ArcArray2<A>) {
         match self.bandwidth {
             None => {
                 let quantile = A::from(0.3).unwrap();
+                let shape = (data.shape()).clone();
+                let data_rows = A::from(shape[0]).unwrap();
+                let one = A::from(1.0).unwrap();
 
-                match &self.dataset {
-                    Some(data) => {
-                        let data_rows = A::from(data.shape()[0]).unwrap();
-                        let one = A::from(1.0).unwrap();
+                let n_neighbors: usize = A::from(data_rows * quantile)
+                    .unwrap()
+                    .max(one)
+                    .to_usize()
+                    .unwrap();
 
-                        let n_neighbors: usize = A::from(data_rows * quantile)
-                            .unwrap()
-                            .max(one)
-                            .to_usize()
-                            .unwrap();
-
-                        let mut tree = KdTree::new(data.shape()[1]);
-                        for (i, point) in data.axis_iter(Axis(0)).enumerate() {
-                            tree.add(RefArray(point.to_shared()), i).unwrap();
-                        }
-
-                        let bandwidth: A = data
-                            .axis_iter(Axis(0))
-                            .into_par_iter()
-                            .map(|x| {
-                                let nearest = tree
-                                    .nearest(
-                                        x.to_slice().unwrap(),
-                                        n_neighbors,
-                                        &self.distance_measure.optimized_call(),
-                                    )
-                                    .unwrap();
-                                let sum = nearest
-                                    .into_iter()
-                                    .map(|(dist, _)| dist)
-                                    .fold(A::min_value(), A::max);
-                                match &self.distance_measure {
-                                    DistanceMeasure::Minkowski => sum.sqrt(),
-                                    _ => sum,
-                                }
-                            })
-                            .sum();
-
-                        self.tree = Some(Arc::new(tree));
-                        self.bandwidth = Some(bandwidth / data_rows);
-                    }
-                    _ => panic!("Data not yet set!"),
+                let mut tree = KdTree::new(shape[1]);
+                for (i, point) in data.axis_iter(Axis(0)).enumerate() {
+                    tree.add(RefArray(point.to_shared()), i).unwrap();
                 }
+
+                let bandwidth: A = data
+                    .axis_iter(Axis(0))
+                    .into_par_iter()
+                    .map(|x| {
+                        let nearest = tree
+                            .nearest(
+                                x.to_slice().unwrap(),
+                                n_neighbors,
+                                &self.distance_measure.optimized_call(),
+                            )
+                            .unwrap();
+                        let sum = nearest
+                            .into_iter()
+                            .map(|(dist, _)| dist)
+                            .fold(A::min_value(), A::max);
+                        match &self.distance_measure {
+                            DistanceMeasure::Minkowski => sum.sqrt(),
+                            _ => sum,
+                        }
+                    })
+                    .sum();
+
+                self.tree = Some(Arc::new(tree));
+                self.bandwidth = Some(bandwidth / data_rows);
             }
             _ => debug!("Skipping bandwidth estimation, because a bandwidth is already given."),
         }
     }
 
-    fn collect_means(&mut self) {
-        self.means
+    fn collect_means(&mut self, mut means: Vec<(Array1<A>, usize, usize, usize)>) {
+        means
             .sort_by(|(a, a_intensity, _, _), (b, b_intensity, _, _)| {
                 let intensity_cmp = a_intensity.cmp(b_intensity);
                 match &intensity_cmp {
@@ -113,20 +102,20 @@ impl<A: LibData> MeanShift<A> {
                 }
             });
 
-        self.means.dedup_by_key(|(x, _, _, _)| x.clone());
+        means.dedup_by_key(|(x, _, _, _)| x.clone());
 
         let tree = self.center_tree.as_mut().unwrap();
-        for (point, _, _, i) in self.means.iter() {
+        for (point, _, _, i) in means.iter() {
             tree.add(RefArray(point.to_shared()), *i).unwrap();
         }
 
         let mut unique: HashMap<usize, bool> =
-            HashMap::from_iter(self.means.iter().map(|(_, _, _, i)| (*i, true)));
+            HashMap::from_iter(means.iter().map(|(_, _, _, i)| (*i, true)));
 
         let distance_fn = self.distance_measure.optimized_call();
 
         let two = A::from(2.0).unwrap();
-        for (mean, _, _, i) in self.means.iter() {  // todo: parallelize
+        for (mean, _, _, i) in means.iter() {  // todo: parallelize
             if unique[i] {
                 let neighbor_idxs = self.center_tree.as_ref().unwrap().within(
                     mean.as_slice().unwrap(),
@@ -142,10 +131,9 @@ impl<A: LibData> MeanShift<A> {
             }
         }
 
-        let dim = self.means[0].0.len();
+        let dim = means[0].0.len();
 
-        let cluster_centers: Vec<ArrayView2<A>> = self
-            .means
+        let cluster_centers: Vec<ArrayView2<A>> = means
             .par_iter()
             .filter_map(|(mean, _, _, identifier)| {
                 if unique[identifier] {
@@ -159,37 +147,34 @@ impl<A: LibData> MeanShift<A> {
         self.cluster_centers = Some(concatenate(Axis(0), cluster_centers.as_slice()).unwrap());
     }
 
-    fn label_data(&mut self) -> Vec<i32> {
-        let dataset = self.dataset.as_ref().unwrap().to_shared();
+    fn label_data(&mut self, data: ArcArray2<A>) -> Vec<i32> {
         let cluster_centers = self.cluster_centers.as_ref().unwrap().to_shared();
 
-        let labels: Vec<i32> = dataset.axis_iter(Axis(0)).into_par_iter()
+        let labels: Vec<i32> = data.axis_iter(Axis(0)).into_par_iter()
             .map(|x| closest_distance(x, cluster_centers.clone(), self.distance_measure))
             .collect();
         labels
     }
 
-    pub fn cluster(&mut self) -> Vec<i32> {
-        self.estimate_bandwidth();
-        self.build_center_tree();
+    pub fn cluster(&mut self, dataset: ArcArray2<A>) -> Vec<i32> {
+        self.estimate_bandwidth(dataset.clone());
+        self.build_center_tree(dataset.clone());
 
-        let dataset = self.dataset.as_ref().unwrap();
-        let shared_dataset = dataset.to_shared();
         let shared_tree = self.tree.as_ref().unwrap();
         let bandwidth = self.bandwidth.as_ref().unwrap();
 
         let means: Vec<(Array1<A>, usize, usize)> = dataset.axis_iter(Axis(0)).into_par_iter().enumerate().map(|(i, point)|
-            mean_shift_single(shared_dataset.clone(), shared_tree.clone(), i, *bandwidth, self.distance_measure)
+            mean_shift_single(dataset.clone(), shared_tree.clone(), i, *bandwidth, self.distance_measure)
         )
             .filter(|(_, points_within_len, _)| points_within_len.gt(&0))
             .collect();
 
-        self.means = means.into_iter().enumerate()
+        let means: Vec<(Array1<A>, usize, usize, usize)> = means.into_iter().enumerate()
             .map(|(i, (means, points_within_len, iterations))| (means, points_within_len, iterations, i))
             .collect();
 
-        self.collect_means();
-        self.label_data()
+        self.collect_means(means);
+        self.label_data(dataset)
     }
 }
 
