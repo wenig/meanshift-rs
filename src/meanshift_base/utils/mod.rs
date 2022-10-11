@@ -8,6 +8,7 @@ use std::fmt::Debug;
 use std::iter::Sum;
 use std::str::FromStr;
 use crate::meanshift_base::DistanceMeasure::{DTW, Manhattan, Minkowski};
+use crate::meanshift_base::utils::dtw::dba;
 
 pub trait LibData:
     'static + Unpin + Clone + Send + Default + Sync + Debug + Float + FromPrimitive + Sum + FromStr
@@ -35,7 +36,7 @@ impl DistanceMeasure {
 
     pub fn mean_call<A: LibData>(&self) -> fn(ArrayView2<A>) -> Array1<A> {
         match self {
-            DTW => |a| dba(a, b),
+            DTW => |a| dba(a),
             _ => |a| {
                 a.mean_axis(Axis(0)).unwrap()
             }

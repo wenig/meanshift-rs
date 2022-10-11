@@ -1,14 +1,17 @@
+#[cfg(test)]
+mod tests;
+
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::iter::FromIterator;
 use std::sync::Arc;
 use std::time::SystemTime;
-use futures::stream::iter;
 use kdtree::KdTree;
 use log::debug;
-use ndarray::{ArcArray2, Array1, Array2, ArrayView2, Axis, concatenate};
+use ndarray::{ArcArray2, Array1, Array2, ArrayView1, ArrayView2, Axis, concatenate};
 use rayon::prelude::*;
 use crate::meanshift_base::{DistanceMeasure, LibData, RefArray};
+use crate::meanshift_base::utils::SliceComp;
 
 
 #[derive(Default)]
@@ -25,27 +28,29 @@ pub(crate) struct MeanShift<A: LibData> {
 }
 
 impl<A: LibData> MeanShift<A> {
-    #[allow(dead_code)]
-    pub(crate) fn start_timer(&mut self) {
-        self.start_time = Some(SystemTime::now());
+    pub fn new(distance_measure: DistanceMeasure) -> Self {
+        Self {
+            dataset: None,
+            bandwidth: None,
+            means: vec![],
+            cluster_centers: None,
+            tree: None,
+            center_tree: None,
+            distance_measure,
+            start_time: None
+        }
     }
 
-    #[allow(dead_code)]
-    pub(crate) fn end_timer(&mut self) {
-        debug!(
-            "duration {}",
-            SystemTime::now()
-                .duration_since(self.start_time.unwrap())
-                .unwrap()
-                .as_millis()
-        );
+    pub fn new_with_threads(distance_measure: DistanceMeasure, n_threads: usize) -> Self {
+        //RAYON_NUM_THREADS todo: set env var with n_threads
+        Self::new(distance_measure)
     }
 
-    pub(crate) fn build_center_tree(&mut self) {
+    fn build_center_tree(&mut self) {
         self.center_tree = Some(KdTree::new(self.dataset.as_ref().unwrap().shape()[1]));
     }
 
-    pub(crate) fn estimate_bandwidth(&mut self) {
+    fn estimate_bandwidth(&mut self) {
         match self.bandwidth {
             None => {
                 let quantile = A::from(0.3).unwrap();
@@ -68,6 +73,7 @@ impl<A: LibData> MeanShift<A> {
 
                         let bandwidth: A = data
                             .axis_iter(Axis(0))
+                            .into_par_iter()
                             .map(|x| {
                                 let nearest = tree
                                     .nearest(
@@ -97,7 +103,7 @@ impl<A: LibData> MeanShift<A> {
         }
     }
 
-    pub(crate) fn collect_means(&mut self) {
+    fn collect_means(&mut self) {
         self.means
             .sort_by(|(a, a_intensity, _, _), (b, b_intensity, _, _)| {
                 let intensity_cmp = a_intensity.cmp(b_intensity);
@@ -153,26 +159,37 @@ impl<A: LibData> MeanShift<A> {
         self.cluster_centers = Some(concatenate(Axis(0), cluster_centers.as_slice()).unwrap());
     }
 
-    pub fn cluster(&mut self) -> () {
+    fn label_data(&mut self) -> Vec<i32> {
+        let dataset = self.dataset.as_ref().unwrap().to_shared();
+        let cluster_centers = self.cluster_centers.as_ref().unwrap().to_shared();
+
+        let labels: Vec<i32> = dataset.axis_iter(Axis(0)).into_par_iter()
+            .map(|x| closest_distance(x, cluster_centers.clone(), self.distance_measure))
+            .collect();
+        labels
+    }
+
+    pub fn cluster(&mut self) -> Vec<i32> {
         self.estimate_bandwidth();
         self.build_center_tree();
 
-        if let Some(dataset) = &self.dataset {
-            let shared_dataset = dataset.to_shared();
-            let shared_tree = self.tree.as_ref().unwrap();
-            let bandwidth = self.bandwidth.as_ref().unwrap();
+        let dataset = self.dataset.as_ref().unwrap();
+        let shared_dataset = dataset.to_shared();
+        let shared_tree = self.tree.as_ref().unwrap();
+        let bandwidth = self.bandwidth.as_ref().unwrap();
 
-            self.means = dataset.axis_iter(Axis(0)).into_par_iter().enumerate().map(|(i, point)|
-                mean_shift_single(shared_dataset.clone(), shared_tree.clone(), i, *bandwidth, self.distance_measure)
-            )
-                .filter(|(_, points_within_len, _)| points_within_len.gt(&0))
-                .enumerate().map(|(i, (means, points_within_len, iterations))| (means, points_within_len, iterations, i))
-                .collect();
+        let means: Vec<(Array1<A>, usize, usize)> = dataset.axis_iter(Axis(0)).into_par_iter().enumerate().map(|(i, point)|
+            mean_shift_single(shared_dataset.clone(), shared_tree.clone(), i, *bandwidth, self.distance_measure)
+        )
+            .filter(|(_, points_within_len, _)| points_within_len.gt(&0))
+            .collect();
 
-            self.collect_means();
+        self.means = means.into_iter().enumerate()
+            .map(|(i, (means, points_within_len, iterations))| (means, points_within_len, iterations, i))
+            .collect();
 
-            // todo: labelling
-        }
+        self.collect_means();
+        self.label_data()
     }
 }
 
@@ -192,7 +209,7 @@ pub fn mean_shift_single<A: LibData>(
     let mut points_within_len: usize = 0;
 
     let distance_fn = distance_measure.optimized_call();
-    let mean_fn = distance_measure.mean_call();
+    let mean_fn = distance_measure.mean_call::<A>();
     let bandwidth = match &distance_measure {
         DistanceMeasure::Minkowski => bandwidth.powf(A::from(2.0).unwrap()),
         _ => bandwidth,
@@ -220,25 +237,18 @@ pub fn mean_shift_single<A: LibData>(
         iterations += 1;
     }
 
-    //println!("took {} microseconds", SystemTime::now().duration_since(start).unwrap().as_micros());
-
     (my_mean, points_within_len, iterations)
 }
 
 pub fn closest_distance<A: LibData>(
-    data: ArcArray2<A>,
-    point_id: usize,
+    data_point: ArrayView1<A>,
     cluster_centers: ArcArray2<A>,
     distance_measure: DistanceMeasure,
-) -> usize {
+) -> i32 {
     let distance_fn = distance_measure.optimized_call();
-    let point = data
-        .select(Axis(0), &[point_id])
-        .mean_axis(Axis(0))
-        .unwrap();
     cluster_centers
         .axis_iter(Axis(0))
-        .map(|center| distance_fn(point.as_slice().unwrap(), center.as_slice().unwrap()))
+        .map(|center| distance_fn(data_point.as_slice().unwrap(), center.as_slice().unwrap()))
         .enumerate()
         .reduce(
             |(min_i, min), (i, x)| {
@@ -250,5 +260,5 @@ pub fn closest_distance<A: LibData>(
             },
         )
         .unwrap()
-        .0
+        .0 as i32
 }

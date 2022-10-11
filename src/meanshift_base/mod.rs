@@ -1,5 +1,5 @@
 mod helper_functions;
-mod utils;
+pub(crate) mod utils;
 
 pub(crate) use crate::meanshift_base::helper_functions::{closest_distance, mean_shift_single};
 pub(crate) use crate::meanshift_base::utils::LibData;
