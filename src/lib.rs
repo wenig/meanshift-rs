@@ -1,13 +1,10 @@
-mod interface;
-mod meanshift_actors;
-mod meanshift_base;
 #[cfg(feature = "python")]
 mod python_binding;
 #[cfg(test)]
 mod test_utils;
 mod utils;
 mod parallel;
+mod distance_measure;
 
-pub use interface::{MeanShiftInterface, MeanShiftResult};
-pub use meanshift_actors::{MeanShiftActor, MeanShiftMessage};
-pub use utils::ClusteringResponse;
+pub use parallel::MeanShift;
+pub use distance_measure::{DistanceMeasure};

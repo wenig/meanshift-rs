@@ -1,5 +1,6 @@
 use std::sync::Arc;
 use ndarray::{arr2, Array2, ArrayView1, Axis};
+use crate::distance_measure::euclidean::Euclidean;
 use crate::parallel::MeanShift;
 use crate::test_utils::{close_l1, read_data};
 
@@ -7,7 +8,7 @@ use crate::test_utils::{close_l1, read_data};
 
 #[test]
 fn test_parallel_meanshift() {
-    let mut mean_shift = MeanShift::<f64>::default();
+    let mut mean_shift = MeanShift::<f64, Euclidean>::default();
 
     let dataset = read_data("data/test.csv");
     let array_vec: Vec<ArrayView1<f64>> = dataset.axis_iter(Axis(0)).collect();
