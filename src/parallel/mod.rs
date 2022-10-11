@@ -4,8 +4,8 @@ mod tests;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::iter::FromIterator;
+use std::ops::{Div, Add};
 use std::sync::Arc;
-use std::time::SystemTime;
 use kdtree::KdTree;
 use log::debug;
 use ndarray::{ArcArray2, Array1, Array2, ArrayView1, ArrayView2, Axis, concatenate};
@@ -39,17 +39,16 @@ impl<A: LibData> MeanShift<A> {
         Self::new(distance_measure)
     }
 
-    fn build_center_tree(&mut self, data: ArcArray2<A>) {
-        let columns = data.shape()[1].clone();
+    fn build_center_tree(&mut self, data: Arc<Vec<ArrayView1<A>>>) {
+        let columns = data[0].len();
         self.center_tree = Some(KdTree::new(columns));
     }
 
-    fn estimate_bandwidth(&mut self, data: ArcArray2<A>) {
+    fn estimate_bandwidth(&mut self, data: Arc<Vec<ArrayView1<A>>>) {
         match self.bandwidth {
             None => {
                 let quantile = A::from(0.3).unwrap();
-                let shape = (data.shape()).clone();
-                let data_rows = A::from(shape[0]).unwrap();
+                let data_rows = A::from(data.len()).unwrap();
                 let one = A::from(1.0).unwrap();
 
                 let n_neighbors: usize = A::from(data_rows * quantile)
@@ -58,14 +57,13 @@ impl<A: LibData> MeanShift<A> {
                     .to_usize()
                     .unwrap();
 
-                let mut tree = KdTree::new(shape[1]);
-                for (i, point) in data.axis_iter(Axis(0)).enumerate() {
+                let mut tree = KdTree::new(data[0].len());
+                for (i, point) in data.iter().enumerate() {
                     tree.add(RefArray(point.to_shared()), i).unwrap();
                 }
 
                 let bandwidth: A = data
-                    .axis_iter(Axis(0))
-                    .into_par_iter()
+                    .par_iter()
                     .map(|x| {
                         let nearest = tree
                             .nearest(
@@ -147,23 +145,23 @@ impl<A: LibData> MeanShift<A> {
         self.cluster_centers = Some(concatenate(Axis(0), cluster_centers.as_slice()).unwrap());
     }
 
-    fn label_data(&mut self, data: ArcArray2<A>) -> Vec<i32> {
+    fn label_data(&mut self, data: Arc<Vec<ArrayView1<A>>>) -> Vec<i32> {
         let cluster_centers = self.cluster_centers.as_ref().unwrap().to_shared();
 
-        let labels: Vec<i32> = data.axis_iter(Axis(0)).into_par_iter()
-            .map(|x| closest_distance(x, cluster_centers.clone(), self.distance_measure))
+        let labels: Vec<i32> = data.par_iter()
+            .map(|x| closest_distance(x.clone(), cluster_centers.clone(), self.distance_measure))
             .collect();
         labels
     }
 
-    pub fn cluster(&mut self, dataset: ArcArray2<A>) -> Vec<i32> {
+    pub fn cluster(&mut self, dataset: Arc<Vec<ArrayView1<A>>>) -> Vec<i32> {
         self.estimate_bandwidth(dataset.clone());
         self.build_center_tree(dataset.clone());
 
         let shared_tree = self.tree.as_ref().unwrap();
         let bandwidth = self.bandwidth.as_ref().unwrap();
 
-        let means: Vec<(Array1<A>, usize, usize)> = dataset.axis_iter(Axis(0)).into_par_iter().enumerate().map(|(i, point)|
+        let means: Vec<(Array1<A>, usize, usize)> = dataset.par_iter().enumerate().map(|(i, _)|
             mean_shift_single(dataset.clone(), shared_tree.clone(), i, *bandwidth, self.distance_measure)
         )
             .filter(|(_, points_within_len, _)| points_within_len.gt(&0))
@@ -180,7 +178,7 @@ impl<A: LibData> MeanShift<A> {
 
 
 pub fn mean_shift_single<A: LibData>(
-    data: ArcArray2<A>,
+    data: Arc<Vec<ArrayView1<A>>>,
     tree: Arc<KdTree<A, usize, RefArray<A>>>,
     seed: usize,
     bandwidth: A,
@@ -189,7 +187,7 @@ pub fn mean_shift_single<A: LibData>(
     let stop_threshold = bandwidth.mul(A::from(1e-3).unwrap());
     let max_iter = 300;
 
-    let mut my_mean = data.select(Axis(0), &[seed]).mean_axis(Axis(0)).unwrap();
+    let mut my_mean = data[seed].to_owned();
     let mut iterations: usize = 0;
     let mut points_within_len: usize = 0;
 
@@ -207,10 +205,11 @@ pub fn mean_shift_single<A: LibData>(
             Err(_) => break,
         };
 
-        let points_within = data.select(Axis(0), neighbor_ids.as_slice());
-        points_within_len = points_within.shape()[0];
+        let points_within: Vec<ArrayView1<A>> = neighbor_ids.into_iter().map(|i| data[i]).collect();
+        points_within_len = points_within.len();
         let my_old_mean = my_mean;
-        my_mean = points_within.mean_axis(Axis(0)).unwrap();
+        my_mean = &my_old_mean * A::from(0.).unwrap();
+        my_mean = points_within.into_iter().fold(my_mean, |a, b| a.add(&b)).div(A::from(points_within_len).unwrap());
 
         if distance_measure.call()(my_mean.as_slice().unwrap(), my_old_mean.as_slice().unwrap())
             < stop_threshold

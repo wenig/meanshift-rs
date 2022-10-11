@@ -1,14 +1,17 @@
-use ndarray::{arr2, Array2};
-use crate::meanshift_base::LibData;
+use std::sync::Arc;
+use ndarray::{arr2, Array2, ArrayView1, Axis};
 use crate::parallel::MeanShift;
 use crate::test_utils::{close_l1, read_data};
+
+// todo: compare Arc<Vec<ArrayView1<f64>>> vs Vec<ArcArray1<f64>>
 
 #[test]
 fn test_parallel_meanshift() {
     let mut mean_shift = MeanShift::<f64>::default();
 
     let dataset = read_data("data/test.csv");
-    let labels = mean_shift.cluster(dataset.to_shared());
+    let array_vec: Vec<ArrayView1<f64>> = dataset.axis_iter(Axis(0)).collect();
+    let labels = mean_shift.cluster(Arc::new(array_vec));
 
     assert_eq!(100, labels.len());
     assert_eq!(0, labels.into_iter().sum());

@@ -1,7 +1,7 @@
 mod dtw;
 
 use kdtree::distance::squared_euclidean;
-use ndarray::{ArcArray1, Array1, ArrayView2, Axis};
+use ndarray::{ArcArray1, Array1, ArrayView2, Axis, ScalarOperand};
 use num_traits::{Float, FromPrimitive};
 use std::cmp::Ordering;
 use std::fmt::Debug;
@@ -11,7 +11,7 @@ use crate::meanshift_base::DistanceMeasure::{DTW, Manhattan, Minkowski};
 use crate::meanshift_base::utils::dtw::dba;
 
 pub trait LibData:
-    'static + Unpin + Clone + Send + Default + Sync + Debug + Float + FromPrimitive + Sum + FromStr
+    'static + Unpin + Clone + Send + Default + Sync + Debug + Float + FromPrimitive + Sum + FromStr + ScalarOperand
 {
 }
 
