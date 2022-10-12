@@ -18,10 +18,7 @@ python = ["pyo3", "numpy"]
 csv = "1.1.6"
 
 [dependencies]
-actix = "0.12"
-actix-rt = "2.2.0"
 env_logger = "0.8"
-futures = "0.3.16"
 kdtree = "0.6.0"
 log = "0.4"
 ndarray = { version = "0.15", features = ["rayon"] }
@@ -31,8 +28,6 @@ num-integer = "0.1.44"
 rayon = "1.5.3"
 sorted-vec = "0.5.2"
 
-tokio = "1.10.0"
-futures-sink = "0.3.16"
 anyhow = "1.0.43"
 
 pyo3 = { version = "0.14.5", features = ["extension-module"], optional = true}
