@@ -1,5 +1,6 @@
 use crate::distance_measure::DistanceMeasure;
 use crate::utils::LibData;
+use anyhow::Result;
 
 #[derive(Copy, Clone, Default)]
 pub struct DTW;
@@ -25,9 +26,13 @@ impl<A: LibData> DistanceMeasure<A> for DTW {
           cost_matrix[point_a.len()][point_b.len()]
     }
 
-    fn mean(points: Vec<&[A]>) -> &[A] {
+    fn mean(points: Vec<&[A]>) -> Result<Vec<A>> {
         todo!()
     }
+
+  fn name() -> String {
+    "dtw".to_string()
+  }
 }
 
 #[cfg(test)]

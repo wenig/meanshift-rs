@@ -1,5 +1,4 @@
-use kdtree::distance::squared_euclidean;
-use ndarray::{ArcArray1, Array1, ArrayView2, Axis, ScalarOperand};
+use ndarray::{ArcArray1, Array1, ScalarOperand};
 use num_traits::{Float, FromPrimitive};
 use std::cmp::Ordering;
 use std::fmt::Debug;

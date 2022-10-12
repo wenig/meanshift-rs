@@ -1,5 +1,6 @@
 use crate::distance_measure::DistanceMeasure;
 use crate::utils::LibData;
+use anyhow::Result;
 
 #[derive(Copy, Clone, Default)]
 pub struct Manhattan;
@@ -12,7 +13,11 @@ impl<A: LibData> DistanceMeasure<A> for Manhattan {
             .sum()
     }
 
-    fn mean(points: Vec<&[A]>) -> &[A] {
+    fn mean(points: Vec<&[A]>) -> Result<Vec<A>> {
         todo!()
+    }
+
+    fn name() -> String {
+        "manhattan".to_string()
     }
 }
