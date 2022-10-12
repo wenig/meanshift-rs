@@ -1,4 +1,4 @@
-use crate::distance_measure::DistanceMeasure;
+use crate::distance_measure::{DistanceMeasure, Euclidean};
 use crate::utils::LibData;
 use anyhow::Result;
 
@@ -14,7 +14,7 @@ impl<A: LibData> DistanceMeasure<A> for Manhattan {
     }
 
     fn mean(points: Vec<&[A]>) -> Result<Vec<A>> {
-        todo!()
+        Euclidean::mean(points)
     }
 
     fn name() -> String {
