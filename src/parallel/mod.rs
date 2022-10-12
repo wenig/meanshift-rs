@@ -76,7 +76,6 @@ impl<A: LibData, D: DistanceMeasure<A>> MeanShift<A, D> {
                             .into_iter()
                             .map(|(dist, _)| dist)
                             .fold(A::min_value(), A::max)
-                            .sqrt()
                     })
                     .sum();
 
@@ -188,7 +187,6 @@ pub fn mean_shift_single<A: LibData, D: DistanceMeasure<A>>(
     let mut iterations: usize = 0;
     let mut points_within_len: usize = 0;
 
-    //let bandwidth = bandwidth.powf(A::from(2.0).unwrap());
     let distance_fn = &<D as DistanceMeasure<A>>::distance;
     let mean_fn = &<D as DistanceMeasure<A>>::mean;
 

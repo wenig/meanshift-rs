@@ -7,7 +7,7 @@ pub struct Euclidean;
 
 impl<A: LibData> DistanceMeasure<A> for Euclidean {
     fn distance(point_a: &[A], point_b: &[A]) -> A {
-        squared_euclidean(point_a, point_b)
+        squared_euclidean(point_a, point_b).sqrt()
     }
 
     fn mean(points: Vec<&[A]>) -> &[A] {
