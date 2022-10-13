@@ -1,4 +1,4 @@
-use std::cmp::min;
+use std::cmp::{min, min_by};
 use std::collections::HashSet;
 use crate::distance_measure::DistanceMeasure;
 use crate::utils::LibData;
@@ -60,7 +60,7 @@ impl DTW {
             let alignment_s = Self::dtw_multiple_alignment(&T_init, S)?;
             for i in 0..T_init.len() {
                 let element = alignment.get_mut(i).ok_or_else(|| Error::msg("Index does not exist"))?;
-                element.extend(&alignment_s[i]);
+                (*element).insert(alignment_s[i]);
             }
         }
 
@@ -74,7 +74,7 @@ impl DTW {
         let mut j = cost[0].len() - 1;
 
         while (i > 0) && (j > 0) {
-            let element = alignment.get_mut(i)?;
+            let element = alignment.get_mut(i).ok_or_else(|| Error::msg("Index does not exist"))?;
             element.extend(point[j]);
 
             if i == 1 {
@@ -82,7 +82,7 @@ impl DTW {
             } else if j == 1 {
                 i -= 1;
             } else {
-                let score = min(min(cost[i-1][j-1], cost[i][j-1]), cost[i-1][j]);
+                let score = min_by(min_by(cost[i-1][j-1], cost[i][j-1], |a, b| a.partial_cmp(b).unwrap()), cost[i-1][j], |a, b| a.partial_cmp(b).unwrap());
                 if score == cost[i-1][j-1] {
                     i -= 1;
                     j -= 1;
