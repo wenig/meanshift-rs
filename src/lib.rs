@@ -7,4 +7,4 @@ mod parallel;
 pub mod distance_measure;
 
 pub use parallel::MeanShift;
-pub use distance_measure::{DistanceMeasure};
+pub use distance_measure::DistanceMeasure;

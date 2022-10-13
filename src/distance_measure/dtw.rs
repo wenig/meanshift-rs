@@ -1,6 +1,8 @@
+use std::cmp::min;
+use std::collections::HashSet;
 use crate::distance_measure::DistanceMeasure;
 use crate::utils::LibData;
-use anyhow::Result;
+use anyhow::{Error, Result};
 use rand::seq::IteratorRandom;
 
 
@@ -30,10 +32,10 @@ impl DTW {
     }
 
     pub fn dba<A: LibData>(points: Vec<&[A]>, n_iterations: usize) -> Result<Vec<A>> {
-        let mut center = points[Self::approximate_medoid(&points)];
+        let mut center = points[Self::approximate_medoid(&points)].to_vec();
 
         for i in 0..n_iterations {
-            center = Self::dba_update();
+            center = Self::dba_update(center, &points)?;
         }
 
         Ok(center)
@@ -52,8 +54,47 @@ impl DTW {
             .min_by(|(_, sum_a), (_, sum_b)| sum_a.partial_cmp(sum_b).unwrap()).unwrap().0
     }
 
-    fn dba_update<A: LibData>() -> Vec<A> {
+    fn dba_update<A: LibData>(T_init: Vec<A>, D: &Vec<&[A]>) -> Result<Vec<A>> {
+        let mut alignment: Vec<HashSet<A>> = vec![HashSet::new(); T_init.len()];
+        for S in D {
+            let alignment_s = Self::dtw_multiple_alignment(&T_init, S)?;
+            for i in 0..T_init.len() {
+                let element = alignment.get_mut(i).ok_or_else(|| Error::msg("Index does not exist"))?;
+                element.extend(&alignment_s[i]);
+            }
+        }
 
+        alignment.into_iter().map(|x| x.into_iter().sum().div(A::from(x.len()).unwrap())).collect()
+    }
+
+    fn dtw_multiple_alignment<A: LibData>(point_ref: &[A], point: &[A]) -> Result<Vec<HashSet<A>>> {
+        let (_, cost) = Self::dtw(point_ref, point);
+        let mut alignment: Vec<HashSet<A>> = vec![HashSet::new(); point_ref.len()];
+        let mut i = cost.len() - 1;
+        let mut j = cost[0].len() - 1;
+
+        while (i > 0) && (j > 0) {
+            let element = alignment.get_mut(i)?;
+            element.extend(point[j]);
+
+            if i == 1 {
+                j -= 1;
+            } else if j == 1 {
+                i -= 1;
+            } else {
+                let score = min(min(cost[i-1][j-1], cost[i][j-1]), cost[i-1][j]);
+                if score == cost[i-1][j-1] {
+                    i -= 1;
+                    j -= 1;
+                } else if score == cost[i-1][j] {
+                    i -= 1;
+                } else {
+                    j -= 1;
+                }
+            }
+        }
+
+        Ok(alignment)
     }
 }
 
