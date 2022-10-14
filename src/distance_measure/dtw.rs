@@ -1,15 +1,16 @@
-use std::cmp::{min, min_by};
+use std::cmp::min_by;
 use std::collections::HashSet;
 use crate::distance_measure::DistanceMeasure;
 use crate::utils::LibData;
 use anyhow::{Error, Result};
 use rand::seq::IteratorRandom;
 
+type Idx = (usize, usize);
 
 #[derive(Copy, Clone, Default)]
 pub struct DTW;
 
-///from https://blog.acolyer.org/2016/05/13/dynamic-time-warping-averaging-of-time-series-allows-faster-and-more-accurate-classification/
+///from https://github.com/tslearn-team/tslearn/blob/42a56cc/tslearn/barycenters/dba.py
 impl DTW {
     pub fn dtw<A: LibData>(point_a: &[A], point_b: &[A]) -> (A, Vec<Vec<A>>) {
         let mut cost_matrix = vec![vec![A::max_value(); point_b.len()+1]; point_a.len()+1];
@@ -34,8 +35,9 @@ impl DTW {
     pub fn dba<A: LibData>(points: Vec<&[A]>, n_iterations: usize) -> Result<Vec<A>> {
         let mut center = points[Self::approximate_medoid(&points)].to_vec();
 
-        for i in 0..n_iterations {
+        for _ in 0..n_iterations {
             center = Self::dba_update(center, &points)?;
+            println!("center {:?}", center);
         }
 
         Ok(center)
@@ -45,7 +47,7 @@ impl DTW {
         let indices = if points.len() <= 50 {
             (0..points.len()).into_iter().collect()
         } else {
-            let mut rng = &mut rand::thread_rng();
+            let rng = &mut rand::thread_rng();
             (0..points.len()).choose_multiple(rng, 50)
         };
 
@@ -54,28 +56,38 @@ impl DTW {
             .min_by(|(_, sum_a), (_, sum_b)| sum_a.partial_cmp(sum_b).unwrap()).unwrap().0
     }
 
-    fn dba_update<A: LibData>(T_init: Vec<A>, D: &Vec<&[A]>) -> Result<Vec<A>> {
-        let mut alignment: Vec<HashSet<A>> = vec![HashSet::new(); T_init.len()];
-        for S in D {
-            let alignment_s = Self::dtw_multiple_alignment(&T_init, S)?;
-            for i in 0..T_init.len() {
+    fn dba_update<A: LibData>(center: Vec<A>, points: &Vec<&[A]>) -> Result<Vec<A>> {
+        let mut alignment: Vec<HashSet<Idx>> = vec![HashSet::new(); center.len()];
+        for (s_idx, s) in points.iter().enumerate() {
+            let alignment_s = Self::dtw_multiple_alignment(&center, s, s_idx)?;
+            for i in 0..center.len() {
                 let element = alignment.get_mut(i).ok_or_else(|| Error::msg("Index does not exist"))?;
-                (*element).insert(alignment_s[i]);
+                (*element).extend(alignment_s[i].iter());
             }
         }
 
-        alignment.into_iter().map(|x| x.into_iter().sum().div(A::from(x.len()).unwrap())).collect()
+        Ok(alignment.into_iter().map(|x| {
+            let len = x.len();
+            let sum = x.into_iter().map(|(i, j)| points[i][j]).sum::<A>();
+            sum.div(A::from(len).unwrap())
+        }).collect())
     }
 
-    fn dtw_multiple_alignment<A: LibData>(point_ref: &[A], point: &[A]) -> Result<Vec<HashSet<A>>> {
-        let (_, cost) = Self::dtw(point_ref, point);
-        let mut alignment: Vec<HashSet<A>> = vec![HashSet::new(); point_ref.len()];
+    fn dtw_multiple_alignment<A: LibData>(point_ref: &[A], point: &[A], point_id: usize) -> Result<Vec<HashSet<Idx>>> {
+        let (_, mut cost) = Self::dtw(point_ref, point);
+        cost.remove(0);
+        for row in cost.iter_mut() {
+            row.remove(0);
+        }
+
+        let mut alignment: Vec<HashSet<Idx>> = vec![HashSet::new(); point_ref.len()];
         let mut i = cost.len() - 1;
         let mut j = cost[0].len() - 1;
 
-        while (i > 0) && (j > 0) {
+        while (i >= 1) && (j >= 1) {
+            println!("aligment {:?} -> {i}", alignment);
             let element = alignment.get_mut(i).ok_or_else(|| Error::msg("Index does not exist"))?;
-            element.extend(point[j]);
+            element.extend(HashSet::from([(point_id, j)]));
 
             if i == 1 {
                 j -= 1;
@@ -133,5 +145,14 @@ mod tests {
 
         let distance: f64 = DTW::distance(&a, &b);
         assert!((distance - 1.75368531).abs() < 1e-7)
+    }
+
+    #[test]
+    fn test_dba_same_lengths() {
+        let a: [f64; 10] = [0.94267613, 0.81582009, 0.63859374, 0.94131796, 0.67312447, 0.3352634 , 0.19988981, 0.3344863 , 0.77753481, 0.92335297];
+        let b = [0.97218557, 0.56986568, 0.53248448, 0.67804195, 0.76575266, 0.19385823, 0.26328398, 0.44685084, 0.90686694, 0.75495287];
+
+        let center = DTW::dba(vec![&a, &b], 10);
+        println!("{:?}", center);
     }
 }
