@@ -1,22 +1,27 @@
-use ndarray::{ArcArray1, Array1, ScalarOperand, Array2, Array3, s, Axis};
+use ndarray::{ArcArray1, Array1, ScalarOperand, Array2, Array3, s, Axis, ArrayView2, ArrayView1, concatenate, ArcArray2};
 use num_traits::{Float, FromPrimitive, Zero};
 use std::cmp::Ordering;
 use std::fmt::{Debug, Display};
 use std::iter::Sum;
 use std::ops::Add;
 use std::str::FromStr;
+use anyhow::Result;
 
 pub trait LibData:
     'static + Unpin + Clone + Send + Default + Sync + Debug + Float + FromPrimitive + Sum + FromStr + ScalarOperand + Display
 {
     const NAN: Self;
+    const INFINITY: Self;
 }
 
 impl LibData for f32 {
     const NAN: Self = Self::NAN;
+    const INFINITY: Self = Self::INFINITY;
 }
+
 impl LibData for f64 {
     const NAN: Self = Self::NAN;
+    const INFINITY: Self = Self::INFINITY;
 }
 
 
@@ -50,39 +55,59 @@ impl<A: LibData> SliceComp for Array1<A> {
 }
 
 /// Can only work with univariate time series for now.
-pub fn time_series_to_matrix<A: LibData>(series: &Vec<&[A]>) -> Array3<A> {
+pub fn time_series_to_matrix<A: LibData>(series: &Vec<ArrayView2<A>>) -> Array3<A> {
     let n_rows = series.len();
     let max_cols = series.iter().map(|s| s.len()).max().unwrap();
-    let variates = 1;
+    let variates = series[0].shape()[1];
     let mut matrix: Array3<A> = Array3::zeros([n_rows, max_cols, variates]) + A::NAN;
 
     for (i, s) in series.iter().enumerate() {
-        let ts: Array1<A> = Array1::from_vec(s.to_vec());
-        let rows = ts.shape()[0];
-        let mut row = matrix.slice_mut(s![i, ..rows, 0_usize]);
-        row.assign(&ts)
+        let rows = s.shape()[0];
+        let mut row = matrix.slice_mut(s![i, ..rows, ..]);
+        row.assign(s)
     }
 
     matrix
 }
 
+pub fn to_time_series_real_size<A: LibData>(series: ArrayView2<A>) -> Result<Array2<A>> {
+    let array_views: Vec<ArrayView2<A>> = series.axis_iter(Axis(0)).filter_map(|p| p.iter().all(|x| !x.is_nan()).then(|| Some(p.insert_axis(Axis(0))))).map(|x| x.unwrap()).collect();
+    Ok(concatenate(Axis(0), &array_views)?)
+}
+
 
 #[cfg(test)]
 mod tests {
+    use ndarray::arr2;
+
     use super::*;
 
     #[test]
     fn test_time_series_to_matrix() {
-        let timeseries: Vec<&[f64]> = vec![
-            &[0.0, 1.0, 2.0],
-            &[3.0, 4.0]
+        let timeseries: Vec<Array2<f64>> = vec![
+            arr2(&[[0.0, 1.0, 2.0]]),
+            arr2(&[[3.0, 4.0]])
         ];
 
-        let matrix = time_series_to_matrix(&timeseries);
+        let matrix = time_series_to_matrix(&timeseries.iter().map(|x| x.t()).collect());
+
         println!("{:?}", matrix);
 
-        assert_eq!(timeseries[0][0], matrix[[0, 0, 0]]);
-        assert_eq!(timeseries[0][1], matrix[[0, 1, 0]]);
+        assert_eq!(timeseries[0][[0, 0]], matrix[[0, 0, 0]]);
+        assert_eq!(timeseries[0][[0, 1]], matrix[[0, 1, 0]]);
         assert!(matrix[[1, 2, 0]].is_nan());
+    }
+
+    #[test]
+    fn test_to_time_series_real_size() {
+        let timeseries: Vec<Array2<f64>> = vec![
+            arr2(&[[0.0, 1.0, 2.0]]),
+            arr2(&[[3.0, 4.0]])
+        ];
+
+        let matrix = time_series_to_matrix(&timeseries.iter().map(|x| x.t()).collect());
+
+        assert_eq!(to_time_series_real_size(matrix.index_axis(Axis(0), 0)).unwrap().shape()[0], 3);
+        assert_eq!(to_time_series_real_size(matrix.index_axis(Axis(0), 1)).unwrap().shape()[0], 2);
     }
 }
