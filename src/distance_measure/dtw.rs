@@ -171,7 +171,7 @@ impl DTW {
         let mut cost = A::from(0.0).unwrap();
         let mut list_p_k = vec![];
         for i in 0..n {
-            let (path, dist_i) = Self::dtw_path(barycenter, dataset.index_axis(Axis(0), i));
+            let (path, dist_i) = Self::dtw_path(barycenter, to_time_series_real_size(dataset.index_axis(Axis(0), i)).unwrap().view());
             cost = cost + dist_i.powi(2).mul(weights[i]);
             list_p_k.push(path);
         }
@@ -285,6 +285,29 @@ mod tests {
                               [0.39066857],
                               [0.84220088],
                               [0.83915292_f64]]);
+
+        for i in 0..a.len() {
+            assert!((center[[i, 0]] - expected[[i, 0]]).abs() < 1e-8);
+        }
+    }
+
+    #[test]
+    fn test_dba_different_lengths() {
+        let a = arr2(&[[0.16023953, 0.59981172, 0.86456616, 0.80691057, 0.1036448 , 0.48439886, 0.42657487, 0.17077501, 0.31801489, 0.90125957]]);
+        let b = arr2(&[[0.37957006, 0.90812822, 0.2398513 , 0.23456596, 0.43191211]]);
+
+        let center = DTW::dba(vec![a.t(), b.t()], None, None, 30, 1e-5, None, None, 1).unwrap();
+
+        let expected = arr2(&[[0.26990479],
+                                               [0.79083537],
+                                               [0.52338094],
+                                               [0.52338094],
+                                               [0.16910538],
+                                               [0.45815549],
+                                               [0.42924349],
+                                               [0.30134356],
+                                               [0.3749635 ],
+                                               [0.66658584_f64]]);
 
         for i in 0..a.len() {
             assert!((center[[i, 0]] - expected[[i, 0]]).abs() < 1e-8);
