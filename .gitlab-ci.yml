@@ -69,3 +69,25 @@ deploy-cargo:
     CARGO_REGISTRY_TOKEN: $CARGO_REGISTRY_TOKEN
   script:
     - cargo publish --token=${CARGO_REGISTRY_TOKEN}
+
+deploy-pypi:
+  stage: deploy
+  only:
+    - main
+  tags:
+    - akita
+    - python
+    - conda
+  variables:
+    PYPI_TOKEN: $PYPI_TOKEN
+    PYPI_USER: __token__
+  before_script:
+    - apt-get update
+    - apt-get install -y curl make gfortran build-essential
+    - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+    - export PATH=/root/.cargo/bin:$PATH
+    - rustc --version
+    - cargo --version
+  script:
+    - make build
+    - TWINE_PASSWORD=${PYPI_TOKEN} TWINE_USERNAME=${PYPI_USER} twine upload --verbose ./wheels/s2gpp-*.whl
