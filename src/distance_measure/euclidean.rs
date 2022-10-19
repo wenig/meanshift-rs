@@ -1,10 +1,10 @@
 use std::ops::Div;
 
-use kdtree::distance::squared_euclidean;
-use ndarray::{ArrayView2, Array2};
 use crate::distance_measure::DistanceMeasure;
 use crate::utils::LibData;
-use anyhow::{Result, Error};
+use anyhow::{Error, Result};
+use kdtree::distance::squared_euclidean;
+use ndarray::{Array2, ArrayView2};
 
 #[derive(Copy, Clone, Default)]
 pub struct Euclidean;
@@ -17,24 +17,35 @@ impl<A: LibData> DistanceMeasure<A> for Euclidean {
     }
 
     fn distance(series_a: ArrayView2<A>, series_b: ArrayView2<A>) -> A {
-        series_a.iter().zip(series_b.iter()).map(|(a, b)| (*a - *b).powi(2)).sum::<A>().sqrt()
+        series_a
+            .iter()
+            .zip(series_b.iter())
+            .map(|(a, b)| (*a - *b).powi(2))
+            .sum::<A>()
+            .sqrt()
     }
 
     fn mean(points: Vec<ArrayView2<A>>) -> Result<Array2<A>> {
-        let el_shape = points.get(0).ok_or_else(|| Error::msg("Empty points list"))?.shape();
+        let el_shape = points
+            .get(0)
+            .ok_or_else(|| Error::msg("Empty points list"))?
+            .shape();
         let el_len = el_shape[0];
         let el_d = el_shape[1];
         let el_n = points.len();
         let sum_vec = Array2::zeros([el_len, el_d]);
-        Ok(points.into_iter().fold(sum_vec, |a, b| a + b).div(A::from_usize(el_n).unwrap()))
+        Ok(points
+            .into_iter()
+            .fold(sum_vec, |a, b| a + b)
+            .div(A::from_usize(el_n).unwrap()))
     }
 }
 
 #[cfg(test)]
 mod test {
-    use ndarray::{arr2, Axis};
     use crate::distance_measure::Euclidean;
     use crate::DistanceMeasure;
+    use ndarray::{arr2, Axis};
 
     #[test]
     fn test_distance_is_same() {

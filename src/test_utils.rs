@@ -1,8 +1,8 @@
+use crate::utils::LibData;
 use csv::{ReaderBuilder, Trim};
 use ndarray::{Array1, Array2};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
-use crate::utils::LibData;
 
 pub(crate) fn close_l1<A: LibData>(a: A, b: A, delta: A) {
     assert!((a - b).abs() < delta)

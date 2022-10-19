@@ -10,8 +10,9 @@ def run_original(data, n_threads: int):
     ms.fit_predict(data)
 
 
-def run_rust(data, n_threads: int, actors: bool):
+def run_rust(data, n_threads: int):
     ms = MeanShiftRS(n_threads=n_threads)
+    data = [d for d in data]
     ms.fit(data)
 
 
@@ -22,7 +23,7 @@ def speed_test():
     data = np.repeat(data, repeats=10, axis=0)
 
     rust_time = timeit.timeit(lambda: run_rust(data, 8, True), number=3)
-    print(f"rust-actors\t|\t{rust_time}")
+    print(f"rust-rayon\t|\t{rust_time}")
 
     original_time = timeit.timeit(lambda: run_original(data, 8), number=3)
     print(f"original\t|\t{original_time}")

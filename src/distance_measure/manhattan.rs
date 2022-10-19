@@ -10,14 +10,16 @@ impl<A: LibData> DistanceMeasure<A> for Manhattan {
     const NAME: &'static str = "manhattan";
 
     fn distance_slice(point_a: &[A], point_b: &[A]) -> A {
-        point_a.iter()
+        point_a
+            .iter()
             .zip(point_b.iter())
             .map(|(a_, b_)| a_.sub(*b_).abs())
             .sum()
     }
 
     fn distance(series_a: ArrayView2<A>, series_b: ArrayView2<A>) -> A {
-        series_a.iter()
+        series_a
+            .iter()
             .zip(series_b.iter())
             .map(|(a_, b_)| a_.sub(*b_).abs())
             .sum()
@@ -30,9 +32,9 @@ impl<A: LibData> DistanceMeasure<A> for Manhattan {
 
 #[cfg(test)]
 mod test {
-    use ndarray::{arr2, Axis};
     use crate::distance_measure::Manhattan;
     use crate::DistanceMeasure;
+    use ndarray::{arr2, Axis};
 
     #[test]
     fn test_distance_is_same() {

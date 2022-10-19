@@ -1,8 +1,8 @@
-use std::sync::Arc;
-use ndarray::{arr2, Array2, ArrayView1, Axis};
 use crate::distance_measure::euclidean::Euclidean;
 use crate::parallel::MeanShift;
 use crate::test_utils::{close_l1, read_data};
+use ndarray::{arr2, Array2, ArrayView1, Axis};
+use std::sync::Arc;
 
 // todo: compare Arc<Vec<ArrayView1<f64>>> vs Vec<ArcArray1<f64>>
 
