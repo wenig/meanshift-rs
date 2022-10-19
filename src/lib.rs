@@ -1,3 +1,5 @@
+extern crate core;
+
 #[cfg(feature = "python")]
 mod python_binding;
 #[cfg(test)]

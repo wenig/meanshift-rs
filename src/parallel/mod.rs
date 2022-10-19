@@ -9,7 +9,7 @@ use std::marker::PhantomData;
 use std::sync::Arc;
 use kdtree::KdTree;
 use log::debug;
-use ndarray::{Array1, Array2, ArrayView1, Axis};
+use ndarray::{Array1, Array2, ArrayView1};
 use rayon::prelude::*;
 use crate::distance_measure::DistanceMeasure;
 use crate::utils::{SliceComp, RefArray, LibData};
@@ -25,7 +25,7 @@ pub struct MeanShift<A: LibData, D: DistanceMeasure<A>> {
 }
 
 impl<A: LibData, D: DistanceMeasure<A>> MeanShift<A, D> {
-    pub fn new(_distance_measure: D, n_threads: usize, bandwidth: Option<A>) -> Self {
+    pub fn new(_distance_measure: D, bandwidth: Option<A>) -> Self {
         Self {
             bandwidth,
             cluster_centers: None,
@@ -35,9 +35,9 @@ impl<A: LibData, D: DistanceMeasure<A>> MeanShift<A, D> {
         }
     }
 
-    pub fn new_with_threads(_distance_measure: D, n_threads: usize) -> Self {
+    pub fn new_with_threads(_distance_measure: D, bandwidth: Option<A>, n_threads: usize) -> Self {
         //RAYON_NUM_THREADS todo: set env var with n_threads
-        Self::new(_distance_measure, n_threads, None)
+        Self::new(_distance_measure, bandwidth)
     }
 
     fn build_center_tree(&mut self, data: Arc<Vec<ArrayView1<A>>>) {

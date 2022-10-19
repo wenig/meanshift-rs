@@ -5,14 +5,19 @@ use ndarray::{ArrayView2, Array2};
 use crate::distance_measure::DistanceMeasure;
 use crate::utils::LibData;
 use anyhow::{Result, Error};
-use num_traits::real::Real;
 
 #[derive(Copy, Clone, Default)]
 pub struct Euclidean;
 
 impl<A: LibData> DistanceMeasure<A> for Euclidean {
+    const NAME: &'static str = "euclidean";
+
     fn distance_slice(point_a: &[A], point_b: &[A]) -> A {
         squared_euclidean(point_a, point_b).sqrt()
+    }
+
+    fn distance(series_a: ArrayView2<A>, series_b: ArrayView2<A>) -> A {
+        series_a.iter().zip(series_b.iter()).map(|(a, b)| (*a - *b).powi(2)).sum::<A>().sqrt()
     }
 
     fn mean(points: Vec<ArrayView2<A>>) -> Result<Array2<A>> {
@@ -20,16 +25,8 @@ impl<A: LibData> DistanceMeasure<A> for Euclidean {
         let el_len = el_shape[0];
         let el_d = el_shape[1];
         let el_n = points.len();
-        let mut sum_vec = Array2::zeros([el_len, el_d]);
+        let sum_vec = Array2::zeros([el_len, el_d]);
         Ok(points.into_iter().fold(sum_vec, |a, b| a + b).div(A::from_usize(el_n).unwrap()))
-    }
-
-    fn name() -> String {
-        "euclidean".to_string()
-    }
-
-    fn distance(series_a: ArrayView2<A>, series_b: ArrayView2<A>) -> A {
-        series_a.iter().zip(series_b.iter()).map(|(a, b)| (*a - *b).powi(2)).sum::<A>().sqrt()
     }
 }
 

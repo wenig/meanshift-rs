@@ -1,17 +1,12 @@
 use kdtree::distance::squared_euclidean;
 use log::*;
-use std::cmp::min_by;
 use std::collections::HashMap;
-use std::ops::{Div, Mul};
+use std::ops::Mul;
 use crate::{distance_measure::DistanceMeasure, utils::time_series_to_matrix};
 use crate::utils::{LibData, nanmean, to_time_series_real_size};
-use anyhow::{Error, Result};
-use ndarray::{Array3, Array2, Axis, Ix3, ArcArray, ArrayView2, s, Array1, ArrayView1, Array, arr1, arr2, RemoveAxis};
-use rand::seq::IteratorRandom;
+use anyhow::Result;
+use ndarray::{Array2, Axis, Ix3, ArcArray, ArrayView2, s, Array1, ArrayView1, Array, arr2};
 
-use super::Euclidean;
-
-type Idx = (usize, usize);
 type ArcArray3<A> = ArcArray<A, Ix3>;
 
 #[derive(Copy, Clone, Default)]
@@ -77,7 +72,7 @@ impl DTW {
         let mut best_cost = A::max_value();
         let mut best_center: Array2<A> = arr2(&[[]]);
 
-        for i in 0..n_init {
+        for _i in 0..n_init {
             let (center, cost) = Self::dba_one_init(
                 &points,
                 barycenter_size,
@@ -112,7 +107,7 @@ impl DTW {
         let mut barycenter = init_barycenter.unwrap_or_else(|| Self::init_avg(dataset.to_shared(), barycenter_size.unwrap()).unwrap());
         let mut cost_prev = A::max_value();
         let mut cost = A::max_value();
-        for i in 0..max_iter {
+        for _i in 0..max_iter {
             let list_p_k;
             (list_p_k, cost) = Self::mm_assignment(dataset.to_shared(), barycenter.view(), weights.view(), metric_params.clone());
             let (diag_sum_v_k, list_w_k) = Self::mm_valence_warping(list_p_k, barycenter_size.unwrap(), weights.view());
@@ -146,7 +141,7 @@ impl DTW {
     }
 
     fn mm_assignment<A: LibData>(dataset: ArcArray3<A>, barycenter: ArrayView2<A>, weights: ArrayView1<A>, params: Option<HashMap<String, A>>) -> (Vec<Vec<(usize, usize)>>, A) {
-        let params = params.unwrap_or_else(|| HashMap::new());
+        let _params = params.unwrap_or_else(|| HashMap::new());
         let n = dataset.shape()[0];
         let mut cost = A::from(0.0).unwrap();
         let mut list_p_k = vec![];
@@ -202,6 +197,8 @@ impl DTW {
 }
 
 impl<A: LibData> DistanceMeasure<A> for DTW {
+    const NAME: &'static str = "dtw";
+
     fn distance_slice(point_a: &[A], point_b: &[A]) -> A {
         DTW::dtw_path(
             ArrayView1::from(point_a).insert_axis(Axis(1)),
@@ -216,19 +213,13 @@ impl<A: LibData> DistanceMeasure<A> for DTW {
     fn mean(points: Vec<ArrayView2<A>>) -> Result<Array2<A>> {
         DTW::dba(points, None, None, 30, A::from_f32(0.00005).unwrap(), None, None, 1)
     }
-
-    fn name() -> String {
-        "dtw".to_string()
-    }
 }
 
 
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use ndarray::{Array2, ArrayView2, arr2, arr3};
+    use ndarray::{Array2, arr2};
 
     use crate::distance_measure::dtw::DTW;
     use crate::DistanceMeasure;
