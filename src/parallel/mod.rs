@@ -7,6 +7,7 @@ use std::collections::HashMap;
 use std::iter::FromIterator;
 use std::marker::PhantomData;
 use std::sync::Arc;
+use std::env;
 use kdtree::KdTree;
 use log::debug;
 use ndarray::{Array1, Array2, ArrayView1};
@@ -36,7 +37,7 @@ impl<A: LibData, D: DistanceMeasure<A>> MeanShift<A, D> {
     }
 
     pub fn new_with_threads(_distance_measure: D, bandwidth: Option<A>, n_threads: usize) -> Self {
-        //RAYON_NUM_THREADS todo: set env var with n_threads
+        env::set_var("RAYON_NUM_THREADS", n_threads.to_string());
         Self::new(_distance_measure, bandwidth)
     }
 
