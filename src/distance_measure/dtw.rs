@@ -19,26 +19,6 @@ pub struct DTW;
 
 ///from https://github.com/tslearn-team/tslearn/blob/42a56cc/tslearn/barycenters/dba.py
 impl DTW {
-    pub fn dtw<A: LibData>(point_a: &[A], point_b: &[A]) -> (A, Vec<Vec<A>>) {
-        let mut cost_matrix = vec![vec![A::max_value(); point_b.len()+1]; point_a.len()+1];
-        cost_matrix[0][0] = A::from(0.).unwrap();
-
-        for i in 1..point_a.len()+1 {
-            for j in 1..point_b.len()+1 {
-                let cost = (point_a[i - 1] - point_b[j - 1]).abs();
-                cost_matrix[i][j] = cost + A::min(
-                    A::min(
-                        cost_matrix[i - 1][j],
-                        cost_matrix[i][j - 1]
-                    ),
-                    cost_matrix[i - 1][j - 1]
-                );
-            }
-        }
-
-        (cost_matrix[point_a.len()][point_b.len()], cost_matrix)
-    }
-
     fn cost_matrix<A: LibData>(point_a: ArrayView2<A>, point_b: ArrayView2<A>, mask: ArrayView2<A>) -> Array2<A> {
         let len_a = point_a.shape()[0];
         let len_b = point_b.shape()[0];
@@ -213,7 +193,7 @@ impl DTW {
         Ok(into_diag.dot(&sum_w_x))
     }
 
-    fn dtw_path<A: LibData>(series_a: ArrayView2<A>, series_b: ArrayView2<A>) -> (Vec<(usize, usize)>, A) {
+    pub fn dtw_path<A: LibData>(series_a: ArrayView2<A>, series_b: ArrayView2<A>) -> (Vec<(usize, usize)>, A) {
         let mask = Array2::zeros([series_a.shape()[0], series_b.shape()[0]]); // todo: use other masks such as sakoe_chiba, itakura
         let cost_matrix = Self::cost_matrix(series_a, series_b, mask.view());
         let path = Self::return_path(cost_matrix.view());
@@ -223,7 +203,10 @@ impl DTW {
 
 impl<A: LibData> DistanceMeasure<A> for DTW {
     fn distance_slice(point_a: &[A], point_b: &[A]) -> A {
-        DTW::dtw(point_a, point_b).0
+        DTW::dtw_path(
+            ArrayView1::from(point_a).insert_axis(Axis(1)),
+            ArrayView1::from(point_b).insert_axis(Axis(1))
+        ).1
     }
 
     fn distance(series_a: ArrayView2<A>, series_b: ArrayView2<A>) -> A {

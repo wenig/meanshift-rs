@@ -5,6 +5,7 @@ use ndarray::{ArrayView2, Array2};
 use crate::distance_measure::DistanceMeasure;
 use crate::utils::LibData;
 use anyhow::{Result, Error};
+use num_traits::real::Real;
 
 #[derive(Copy, Clone, Default)]
 pub struct Euclidean;
@@ -27,7 +28,28 @@ impl<A: LibData> DistanceMeasure<A> for Euclidean {
         "euclidean".to_string()
     }
 
-    fn distance(series_a: ndarray::ArrayView2<A>, series_b: ndarray::ArrayView2<A>) -> A {
-        todo!()
+    fn distance(series_a: ArrayView2<A>, series_b: ArrayView2<A>) -> A {
+        series_a.iter().zip(series_b.iter()).map(|(a, b)| (*a - *b).powi(2)).sum::<A>().sqrt()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use ndarray::{arr2, Axis};
+    use crate::distance_measure::Euclidean;
+    use crate::DistanceMeasure;
+
+    #[test]
+    fn test_distance_is_same() {
+        let a = arr2(&[[0.0, 1.0, 2.0]]);
+        let b = arr2(&[[3.0, 4.0, 5.0]]);
+
+        assert_eq!(
+            Euclidean::distance_slice(
+                a.index_axis(Axis(0), 0).as_slice().unwrap(),
+                b.index_axis(Axis(0), 0).as_slice().unwrap()
+            ),
+            Euclidean::distance(a.t(), b.t())
+        )
     }
 }

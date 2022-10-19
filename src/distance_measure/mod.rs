@@ -21,6 +21,6 @@ where
 
     fn mean_1d(points: Vec<ArrayView1<A>>) -> Result<Array1<A>> {
         let points: Vec<ArrayView2<A>> = points.into_iter().map(|x| x.insert_axis(Axis(0))).collect();
-        Ok(Self::mean(points)?.index_axis_move(Axis(1), 0))
+        Ok(Self::mean(points)?.index_axis_move(Axis(0), 0))
     }
 }
