@@ -2,11 +2,11 @@ use kdtree::distance::squared_euclidean;
 use log::*;
 use std::cmp::min_by;
 use std::collections::HashMap;
-use std::ops::Mul;
+use std::ops::{Div, Mul};
 use crate::{distance_measure::DistanceMeasure, utils::time_series_to_matrix};
-use crate::utils::{LibData, to_time_series_real_size};
+use crate::utils::{LibData, nanmean, to_time_series_real_size};
 use anyhow::{Error, Result};
-use ndarray::{Array3, Array2, Axis, Ix3, ArcArray, ArrayView2, s, Array1, ArrayView1, Array, arr1, arr2};
+use ndarray::{Array3, Array2, Axis, Ix3, ArcArray, ArrayView2, s, Array1, ArrayView1, Array, arr1, arr2, RemoveAxis};
 use rand::seq::IteratorRandom;
 
 use super::Euclidean;
@@ -152,7 +152,7 @@ impl DTW {
 
     fn init_avg<A: LibData>(dataset: ArcArray3<A>, barycenter_size: usize) -> Result<Array2<A>> {
         if dataset.shape()[1] == barycenter_size {
-            dataset.mean_axis(Axis(0)).ok_or_else(|| Error::msg("Dataset is empty"))
+            nanmean(dataset.view(), Axis(0))
         } else {
             todo!()
         }
@@ -245,7 +245,7 @@ impl<A: LibData> DistanceMeasure<A> for DTW {
 mod tests {
     use std::collections::HashMap;
 
-    use ndarray::{Array2, ArrayView2, arr2};
+    use ndarray::{Array2, ArrayView2, arr2, arr3};
 
     use crate::distance_measure::dtw::DTW;
     use crate::DistanceMeasure;

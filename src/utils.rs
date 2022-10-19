@@ -1,4 +1,4 @@
-use ndarray::{ArcArray1, Array1, ScalarOperand, Array2, Array3, s, Axis, ArrayView2, ArrayView1, concatenate, ArcArray2};
+use ndarray::{ArcArray1, Array1, ScalarOperand, Array2, Array3, s, Axis, ArrayView2, ArrayView1, concatenate, ArcArray2, ArrayView3};
 use num_traits::{Float, FromPrimitive, Zero};
 use std::cmp::Ordering;
 use std::fmt::{Debug, Display};
@@ -54,6 +54,16 @@ impl<A: LibData> SliceComp for Array1<A> {
     }
 }
 
+pub fn nanmean<A: LibData>(arr: ArrayView3<A>, axis: Axis) -> Result<Array2<A>> {
+    let axis = Axis(0);
+    let mask = arr.mapv(|x| A::from_usize(!x.is_nan() as usize).unwrap());
+    let nan_sum: Array2<A> = arr.axis_iter(axis)
+        .fold(Array2::zeros([arr.shape()[1], arr.shape()[2]]),
+        |res, s| res + s.mapv(|x| if x.is_nan() { A::from_usize(0).unwrap() } else { x }));
+    let divisor = mask.sum_axis(axis);
+    Ok(nan_sum / divisor)
+}
+
 /// Can only work with univariate time series for now.
 pub fn time_series_to_matrix<A: LibData>(series: &Vec<ArrayView2<A>>) -> Array3<A> {
     let n_rows = series.len();
@@ -78,7 +88,8 @@ pub fn to_time_series_real_size<A: LibData>(series: ArrayView2<A>) -> Result<Arr
 
 #[cfg(test)]
 mod tests {
-    use ndarray::arr2;
+    use ndarray::{arr2, arr3};
+    use crate::distance_measure::DTW;
 
     use super::*;
 
@@ -109,5 +120,20 @@ mod tests {
 
         assert_eq!(to_time_series_real_size(matrix.index_axis(Axis(0), 0)).unwrap().shape()[0], 3);
         assert_eq!(to_time_series_real_size(matrix.index_axis(Axis(0), 1)).unwrap().shape()[0], 2);
+    }
+
+    #[test]
+    fn test_nanmean() {
+        let dataset = arr3(&[
+            [[0.0, 0.0], [1.0, 1.0], [2.0, 2.0]],
+            [[3.0, 3.0], [4.0, 4.0], [f64::NAN, 5.0]]
+        ]);
+
+        let expected = arr2(&[
+            [1.5, 1.5], [2.5, 2.5], [2.0, 3.5]
+        ]);
+
+        let avg = nanmean(dataset.view(), Axis(0)).unwrap();
+        assert_eq!(avg, expected)
     }
 }
