@@ -1,12 +1,12 @@
-mod interface;
-mod meanshift_actors;
-mod meanshift_base;
+extern crate core;
+
+pub mod distance_measure;
+mod parallel;
 #[cfg(feature = "python")]
 mod python_binding;
 #[cfg(test)]
 mod test_utils;
 mod utils;
 
-pub use interface::{MeanShiftInterface, MeanShiftResult};
-pub use meanshift_actors::{MeanShiftActor, MeanShiftMessage};
-pub use utils::ClusteringResponse;
+pub use distance_measure::DistanceMeasure;
+pub use parallel::MeanShift;
