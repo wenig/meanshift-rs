@@ -288,7 +288,7 @@ mod tests {
         ];
 
         let distance: f64 = DTW::distance_slice(&a, &b);
-        assert!((distance - 1.28325005).abs() < 1e-7)
+        assert!((distance - 0.4049548559596511).abs() < 1e-7)
     }
 
     #[test]
@@ -300,7 +300,7 @@ mod tests {
         let b = [0.37957006, 0.90812822, 0.2398513, 0.23456596, 0.43191211];
 
         let distance: f64 = DTW::distance_slice(&a, &b);
-        assert!((distance - 1.75368531).abs() < 1e-7)
+        assert!((distance - 0.6698380712497375).abs() < 1e-7)
     }
 
     #[test]
@@ -314,7 +314,7 @@ mod tests {
             0.44685084, 0.90686694, 0.75495287,
         ]]);
 
-        let center = DTW::dba(vec![a.t(), b.t()], None, None, 30, 1e-5, None, None, 1).unwrap();
+        let center = DTW::dba(vec![a.t(), b.t()], None, None, 30, 1e-5, None, 1).unwrap();
 
         let expected = arr2(&[
             [0.95743085],
@@ -342,7 +342,7 @@ mod tests {
         ]]);
         let b = arr2(&[[0.37957006, 0.90812822, 0.2398513, 0.23456596, 0.43191211]]);
 
-        let center = DTW::dba(vec![a.t(), b.t()], None, None, 30, 1e-5, None, None, 1).unwrap();
+        let center = DTW::dba(vec![a.t(), b.t()], None, None, 30, 1e-5, None, 1).unwrap();
 
         let expected = arr2(&[
             [0.26990479],
