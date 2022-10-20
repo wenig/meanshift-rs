@@ -56,7 +56,9 @@ coverage:
     paths:
       - 'coverage'
     reports:
-      cobertura: coverage.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
 
 deploy-cargo:
   image: "gitlab.hpi.de/akita/dependency_proxy/containers/rust:latest"
