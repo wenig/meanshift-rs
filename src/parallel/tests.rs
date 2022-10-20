@@ -1,5 +1,5 @@
-use crate::distance_measure::DTW;
 use crate::distance_measure::euclidean::Euclidean;
+use crate::distance_measure::DTW;
 use crate::parallel::MeanShift;
 use crate::test_utils::{close_l1, read_data};
 use ndarray::{arr2, Array2, ArrayView1, Axis};
