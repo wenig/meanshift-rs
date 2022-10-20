@@ -1,4 +1,4 @@
-use crate::meanshift_base::LibData;
+use crate::utils::LibData;
 use csv::{ReaderBuilder, Trim};
 use ndarray::{Array1, Array2};
 use std::fs::File;
