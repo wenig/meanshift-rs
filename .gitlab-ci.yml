@@ -92,4 +92,4 @@ deploy-pypi:
     - cargo --version
   script:
     - make build
-    - TWINE_PASSWORD=${PYPI_TOKEN} TWINE_USERNAME=${PYPI_USER} twine upload --verbose ./wheels/s2gpp-*.whl
+    - TWINE_PASSWORD=${PYPI_TOKEN} TWINE_USERNAME=${PYPI_USER} twine upload --verbose ./wheels/meanshift_rs-*.whl
