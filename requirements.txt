@@ -1,3 +1,3 @@
 maturin==0.13.6
 numpy==1.21.*
-twine==0.4.*
+twine==4.0.*
