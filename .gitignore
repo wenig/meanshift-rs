@@ -6,3 +6,5 @@ meanshift_rs/__pycache__
 wheels
 coverage
 .python-version
+.fleet
+.vscode
