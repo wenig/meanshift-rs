@@ -7,6 +7,28 @@ default:
     - apt-get install -y gfortran
     - apt-get install -y build-essential
 
+.matrix-common:
+  tags:
+    - akita
+    - conda
+  before_script: &common-before-script
+    - export PIP_CACHE_DIR="/opt/cache/pip"
+    - echo "Setting up conda environment and installing dependencies"
+    - conda create -y -n meanshift python=${PYTHON_VERSION:-3.7}
+    - source activate meanshift
+    - pip install -r requirements.txt
+    - python --version
+    - apt-get update
+    - apt-get install -y curl make gfortran build-essential
+    - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+    - export PATH=/root/.cargo/bin:$PATH
+    - rustc --version
+    - cargo --version
+  parallel:
+    matrix:
+        - PYTHON_VERSION: ["3.7", "3.8", "3.9"]
+
+
 stages:
   - style
   - test
@@ -73,6 +95,7 @@ deploy-cargo:
     - cargo publish --token=${CARGO_REGISTRY_TOKEN}
 
 deploy-pypi:
+  extends: .matrix-common
   stage: deploy
   only:
     - main
@@ -83,13 +106,6 @@ deploy-pypi:
   variables:
     PYPI_TOKEN: $PYPI_TOKEN
     PYPI_USER: __token__
-  before_script:
-    - apt-get update
-    - apt-get install -y curl make gfortran build-essential
-    - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-    - export PATH=/root/.cargo/bin:$PATH
-    - rustc --version
-    - cargo --version
   script:
     - make build
     - TWINE_PASSWORD=${PYPI_TOKEN} TWINE_USERNAME=${PYPI_USER} twine upload --verbose ./wheels/meanshift_rs-*.whl

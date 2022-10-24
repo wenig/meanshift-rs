@@ -5,7 +5,7 @@
 [![coverage report](https://gitlab.hpi.de/phillip.wenig/meanshift-rs/badges/main/coverage.svg)](https://gitlab.hpi.de/phillip.wenig/meanshift-rs/-/commits/main)
 
 
-[![Git tag](https://img.shields.io/badge/tag-0.8.0-blue?style=for-the-badge)](./Cargo.toml)
+[![Git tag](https://img.shields.io/badge/tag-0.9.1-blue?style=for-the-badge)](./Cargo.toml)
 </div>
 
 ## Install as Python Package
@@ -13,7 +13,7 @@
 ### 0. Minimum Requirements
 
 - `rustc 1.54.0`
-- `Python 3.8`
+- `Python 3.7`
 
 ### 1. Create Python Environment
 
