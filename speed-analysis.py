@@ -16,7 +16,6 @@ def run_original(data, n_threads: int):
 
 def run_rust(data, n_threads: int):
     ms = MeanShiftRS(n_threads=n_threads)
-    data = [d for d in data]
     ms.fit(data)
 
 

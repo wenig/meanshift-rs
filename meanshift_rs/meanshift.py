@@ -2,7 +2,7 @@ from __future__ import annotations
 from warnings import warn
 
 from .meanshift_rs import meanshift_algorithm
-from typing import Optional, List
+from typing import Optional, List, Union
 import numpy as np
 import numpy.typing as npt
 
@@ -30,18 +30,19 @@ class MeanShift:
         self.cluster_centers: Optional[npt.NDArray[np.float32]] = None
         self.labels: Optional[List[int]] = None
 
-    def fit(self, X: List[npt.NDArray[np.float32]]) -> MeanShift:
+    def fit(self, X: Union[List[npt.NDArray[np.float32]], npt.NDArray[np.float32]]) -> MeanShift:
         """
         Fit the model to the data.
 
-        :param X: List[np.ndarray]
-            List of points with 1 dimension in the best case. If 2 dimensional arrays are used, only the first channel will be used for clustering.
+        :param X: Union[List[np.ndarray], np.ndarray]
+            List of points with 1 dimension or 2 dimensional ndarray (n, dim).
 
         :return:
             The fitted model.
         """
 
-        X = [self._make_1d(x) for x in X]
+        if type(X) == list:
+            X = self._make_matrix(X)
 
         self.cluster_centers, self.labels = meanshift_algorithm(
             X,
@@ -51,11 +52,9 @@ class MeanShift:
         )
         return self
 
-    def _make_1d(self, x: npt.NDArray[np.float32]) -> npt.NDArray[np.float32]:
-        dims = len(x.shape)
-        if 1 < dims <= 2:
-            return x[:, 0]
-        elif dims > 2:
-            raise ValueError("Time series of more than 2 dimensions are not supported!")
-        return x
-
+    def _make_matrix(self, X: List[npt.NDArray[np.float32]]) -> npt.NDArray[np.float32]:
+        max_dims = max(x.shape[0] for x in X)
+        matrix = np.zeros((len(X), max_dims)) + np.nan
+        for i, x in enumerate(X):
+            matrix[i, :len(x)] = x
+        return matrix
