@@ -21,16 +21,22 @@ def run_rust(data, n_threads: int):
 
 
 def speed_test():
-    print(f"algorithm\t|\ttime")
-    print("---------------------------")
+    print(f"algorithm\t|\tthreads\t|\ttime")
+    print("------------------------------------------------------")
     data = load_wine()["data"].astype(np.float64)
     data = np.repeat(data, repeats=10, axis=0)
 
     rust_time = timeit.timeit(lambda: run_rust(data, 8), number=3)
-    print(f"rust-rayon\t|\t{rust_time}")
+    print(f"rust-rayon\t|\t8\t|\t{rust_time}")
+
+    rust_time = timeit.timeit(lambda: run_rust(data, 4), number=3)
+    print(f"rust-rayon\t|\t4\t|\t{rust_time}")
+
+    rust_time = timeit.timeit(lambda: run_rust(data, 1), number=3)
+    print(f"rust-rayon\t|\t1\t|\t{rust_time}")
 
     original_time = timeit.timeit(lambda: run_original(data, 8), number=3)
-    print(f"original\t|\t{original_time}")
+    print(f"original\t|\t8\t|\t{original_time}")
 
 
 if __name__ == "__main__":

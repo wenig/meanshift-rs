@@ -1,4 +1,5 @@
 from __future__ import annotations
+from warnings import warn
 
 from .meanshift_rs import meanshift_algorithm
 from typing import Optional, List
@@ -34,11 +35,14 @@ class MeanShift:
         Fit the model to the data.
 
         :param X: List[np.ndarray]
-            List of points.
+            List of points with 1 dimension in the best case. If 2 dimensional arrays are used, only the first channel will be used for clustering.
 
         :return:
             The fitted model.
         """
+
+        X = [self._make_1d(x) for x in X]
+
         self.cluster_centers, self.labels = meanshift_algorithm(
             X,
             self.n_threads,
@@ -46,3 +50,12 @@ class MeanShift:
             self.distance_measure
         )
         return self
+
+    def _make_1d(self, x: npt.NDArray[np.float32]) -> npt.NDArray[np.float32]:
+        dims = len(x.shape)
+        if 1 < dims <= 2:
+            return x[:, 0]
+        elif dims > 2:
+            raise ValueError("Time series of more than 2 dimensions are not supported!")
+        return x
+
