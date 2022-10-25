@@ -2,8 +2,7 @@ use crate::distance_measure::euclidean::Euclidean;
 use crate::distance_measure::DTW;
 use crate::parallel::MeanShift;
 use crate::test_utils::{close_l1, read_data};
-use ndarray::{arr2, Array2, ArrayView1, Axis};
-use std::sync::Arc;
+use ndarray::{arr2, Array2};
 
 // todo: compare Arc<Vec<ArrayView1<f64>>> vs Vec<ArcArray1<f64>>
 
@@ -14,8 +13,7 @@ fn test_parallel_meanshift() {
     let mut mean_shift = MeanShift::<f64, Euclidean>::default();
 
     let dataset = read_data("data/test.csv");
-    let array_vec: Vec<ArrayView1<f64>> = dataset.axis_iter(Axis(0)).collect();
-    let (labels, centers) = mean_shift.cluster(Arc::new(array_vec)).unwrap();
+    let (labels, centers) = mean_shift.cluster(dataset.view()).unwrap();
 
     assert_eq!(100, labels.len());
     assert_eq!(0, labels.into_iter().sum());
@@ -30,6 +28,5 @@ fn test_parallel_meanshift_dtw_runs_without_errors() {
     let mut mean_shift = MeanShift::<f64, DTW>::default();
 
     let dataset = read_data("data/test.csv");
-    let array_vec: Vec<ArrayView1<f64>> = dataset.axis_iter(Axis(0)).collect();
-    let (_labels, _centers) = mean_shift.cluster(Arc::new(array_vec)).unwrap();
+    let (_labels, _centers) = mean_shift.cluster(dataset.view()).unwrap();
 }

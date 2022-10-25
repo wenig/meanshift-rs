@@ -6,7 +6,7 @@ use crate::utils::{LibData, RefArray, SliceComp};
 use anyhow::Result;
 use kdtree::KdTree;
 use log::debug;
-use ndarray::{Array1, Array2, ArrayView1};
+use ndarray::{Array1, Array2, ArrayView1, ArrayView2, Axis};
 use rayon::prelude::*;
 use std::cmp::Ordering;
 use std::collections::HashMap;
@@ -40,16 +40,16 @@ impl<A: LibData, D: DistanceMeasure<A>> MeanShift<A, D> {
         Self::new(_distance_measure, bandwidth)
     }
 
-    fn build_center_tree(&mut self, data: Arc<Vec<ArrayView1<A>>>) {
-        let columns = data[0].len();
+    fn build_center_tree(&mut self, data: ArrayView2<A>) {
+        let columns = data.shape()[1];
         self.center_tree = Some(KdTree::new(columns));
     }
 
-    fn estimate_bandwidth(&mut self, data: Arc<Vec<ArrayView1<A>>>) {
+    fn estimate_bandwidth(&mut self, data: ArrayView2<A>) {
         match self.bandwidth {
             None => {
                 let quantile = A::from_f32(0.3).unwrap();
-                let data_rows = A::from(data.len()).unwrap();
+                let data_rows = A::from(data.shape()[0]).unwrap();
                 let one = A::from_usize(1).unwrap();
 
                 let n_neighbors: usize = A::from(data_rows * quantile)
@@ -58,17 +58,18 @@ impl<A: LibData, D: DistanceMeasure<A>> MeanShift<A, D> {
                     .to_usize()
                     .unwrap();
 
-                let mut tree = KdTree::new(data[0].len());
-                for (i, point) in data.iter().enumerate() {
+                let mut tree = KdTree::new(data.shape()[1]);
+                for (i, point) in data.axis_iter(Axis(0)).enumerate() {
                     tree.add(RefArray(point.to_shared()), i).unwrap();
                 }
 
                 let bandwidth: A = data
-                    .par_iter()
+                    .axis_iter(Axis(0))
+                    .into_par_iter()
                     .map(|x| {
                         let nearest = tree
                             .nearest(
-                                x.to_slice().unwrap(),
+                                x.as_slice().unwrap(),
                                 n_neighbors,
                                 &<D as DistanceMeasure<A>>::distance_slice,
                             )
@@ -148,34 +149,27 @@ impl<A: LibData, D: DistanceMeasure<A>> MeanShift<A, D> {
             .collect()
     }
 
-    fn label_data(
-        &mut self,
-        data: Arc<Vec<ArrayView1<A>>>,
-        cluster_centers: Vec<ArrayView1<A>>,
-    ) -> Vec<i32> {
+    fn label_data(&mut self, data: ArrayView2<A>, cluster_centers: Vec<ArrayView1<A>>) -> Vec<i32> {
         let labels: Vec<i32> = data
-            .par_iter()
-            .map(|x| closest_distance::<_, D>(*x, cluster_centers.clone()))
+            .axis_iter(Axis(0))
+            .into_par_iter()
+            .map(|x| closest_distance::<_, D>(x, cluster_centers.clone()))
             .collect();
         labels
     }
 
-    pub fn cluster(
-        &mut self,
-        dataset: Arc<Vec<ArrayView1<A>>>,
-    ) -> Result<(Vec<i32>, Vec<Array1<A>>)> {
-        self.estimate_bandwidth(dataset.clone());
-        self.build_center_tree(dataset.clone());
+    pub fn cluster(&mut self, dataset: ArrayView2<A>) -> Result<(Vec<i32>, Vec<Array1<A>>)> {
+        self.estimate_bandwidth(dataset);
+        self.build_center_tree(dataset);
 
         let shared_tree = self.tree.as_ref().unwrap();
         let bandwidth = self.bandwidth.as_ref().unwrap();
 
         let means: Vec<(Array1<A>, usize, usize)> = dataset
-            .par_iter()
+            .axis_iter(Axis(0))
+            .into_par_iter()
             .enumerate()
-            .map(|(i, _)| {
-                mean_shift_single::<_, D>(dataset.clone(), shared_tree.clone(), i, *bandwidth)
-            })
+            .map(|(i, _)| mean_shift_single::<_, D>(dataset, shared_tree.clone(), i, *bandwidth))
             .filter(|(_, points_within_len, _)| points_within_len.gt(&0))
             .collect();
 
@@ -196,7 +190,7 @@ impl<A: LibData, D: DistanceMeasure<A>> MeanShift<A, D> {
 }
 
 pub fn mean_shift_single<A: LibData, D: DistanceMeasure<A>>(
-    data: Arc<Vec<ArrayView1<A>>>,
+    data: ArrayView2<A>,
     tree: Arc<KdTree<A, usize, RefArray<A>>>,
     seed: usize,
     bandwidth: A,
@@ -204,7 +198,7 @@ pub fn mean_shift_single<A: LibData, D: DistanceMeasure<A>>(
     let stop_threshold = bandwidth.mul(A::from_f32(1e-3).unwrap());
     let max_iter = 300;
 
-    let mut my_mean = data[seed].to_owned();
+    let mut my_mean = data.index_axis(Axis(0), seed).to_owned();
     let mut iterations: usize = 0;
     let mut points_within_len: usize = 0;
 
@@ -219,7 +213,10 @@ pub fn mean_shift_single<A: LibData, D: DistanceMeasure<A>>(
             Err(_) => break,
         };
 
-        let points_within: Vec<ArrayView1<A>> = neighbor_ids.into_iter().map(|i| data[i]).collect();
+        let points_within: Vec<ArrayView1<A>> = neighbor_ids
+            .into_iter()
+            .map(|i| data.index_axis(Axis(0), i))
+            .collect();
         points_within_len = points_within.len();
         let my_old_mean = my_mean;
         my_mean = mean_fn(points_within).unwrap_or_else(|_| zero.clone());

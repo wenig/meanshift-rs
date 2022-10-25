@@ -42,8 +42,8 @@ pub struct RefArray<A: LibData>(pub ArcArray1<A>);
 
 impl<A: LibData> AsRef<[A]> for RefArray<A> {
     fn as_ref(&self) -> &[A] {
-        let arc_array = &self.0;
-        arc_array.as_slice().unwrap()
+        let array = &self.0;
+        array.as_slice().unwrap()
     }
 }
 
